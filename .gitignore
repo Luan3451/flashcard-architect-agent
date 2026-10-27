@@ -3,11 +3,13 @@
 *.env
 config.local.py
 
-# Mídia gerada
+# Mídia gerada pelo script
 anki_media/
 
 # Saídas geradas
 *.apkg
+
+# Documentos de entrada (não versionar materiais pessoais)
 *.pdf
 *.docx
 

@@ -1,0 +1,11 @@
+{
+  "name": "flashcard-architect",
+  "version": "1.1.0",
+  "description": "Especialista em aprendizagem e criação de flashcards de alta retenção para o Anki. Processa PDF, DOCX, TXT e Markdown, extrai imagens e entrega JSON estruturado com HTML/CSS dark mode.",
+  "author": "Luan3451",
+  "repository": "https://github.com/Luan3451/flashcard-architect-agent",
+  "components": {
+    "agents": ["agents/flashcard-architect.md"],
+    "skills": ["skills/flashcard-architect/SKILL.md"]
+  }
+}

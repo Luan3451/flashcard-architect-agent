@@ -1,8 +1,9 @@
 # 🧠 Flashcard Architect Agent
 
-> Especialista em transformar qualquer material de estudo em flashcards de alta retenção para o Anki.
+> Plugin para o **Antigravity CLI** — Especialista em transformar qualquer material de estudo em flashcards de alta retenção para o Anki.
 
-Um agente otimizado para o **Gemini** e **Antigravity CLI** que extrai, organiza e converte materiais de estudo em flashcards com imagens embutidas, formatação HTML/CSS rich e saída `.apkg` pronta para importar.
+[![Antigravity Plugin](https://img.shields.io/badge/Antigravity-Plugin-blue)](https://github.com/Luan3451/flashcard-architect-agent)
+[![Version](https://img.shields.io/badge/version-1.1.0-green)](https://github.com/Luan3451/flashcard-architect-agent)
 
 ---
 
@@ -15,38 +16,80 @@ Um agente otimizado para o **Gemini** e **Antigravity CLI** que extrai, organiza
 | 🎨 **Formatação rica** | HTML/CSS nativo com dark mode, negritos, listas, blocos de código |
 | 🧠 **IA especialista** | Gemini 2.5 Flash com system prompt otimizado para aprendizagem |
 | 📦 **Saída estruturada** | JSON válido → `.apkg` pronto para importar no Anki |
-| ⚙️ **FSRS Ready** | Cards atômicos (uma ideia por card) otimizados para repetição espaçada |
+| ⚙️ **FSRS Ready** | Cards atômicos otimizados para repetição espaçada |
 
 ---
 
-## ⚙️ Instalação
+## 📁 Estrutura do Plugin
+
+```
+flashcard-architect-agent/
+├── plugin.json                          ← Manifesto do plugin (Antigravity)
+├── agents/
+│   └── flashcard-architect.md           ← Definição do agente
+├── skills/
+│   └── flashcard-architect/
+│       └── SKILL.md                     ← Skill completa com workflow
+├── scripts/
+│   └── anki_generator.py                ← Script Python de extração e geração
+├── prompt_agente.txt                    ← System prompt puro (para AI Studio/Gems)
+└── README.md                            ← Esta documentação
+```
+
+---
+
+## ⚙️ Instalação no Antigravity CLI
+
+```bash
+agy plugin install https://github.com/Luan3451/flashcard-architect-agent
+```
+
+> Quando solicitado, confirme com **Y** (o comando está na Deny List de segurança do AGY por padrão).
+
+Verifique a instalação:
+
+```bash
+agy plugin validate flashcard-architect
+agy plugin list
+```
+
+---
+
+## 🛠️ Configuração e Uso do Script Python
+
+### 1. Instalar dependências
 
 ```bash
 pip install PyMuPDF genanki google-generativeai python-docx
 ```
 
----
+### 2. Configurar variáveis de ambiente (recomendado)
 
-## 🛠️ Configuração e Uso
+**Windows:**
+```cmd
+set GEMINI_API_KEY=sua-api-key-gemini
+```
 
-### 1. Configure o script
+**Linux/macOS:**
+```bash
+export GEMINI_API_KEY="sua-api-key-gemini"
+```
 
-Edite `anki_generator.py`:
-
+Ou edite diretamente no topo do `scripts/anki_generator.py`:
 ```python
 GEMINI_API_KEY = "sua-api-key-gemini"   # https://aistudio.google.com/app/apikey
-INPUT_PATH     = "meu_material.pdf"      # PDF, DOCX, TXT ou MD
+INPUT_PATH     = "caminho/para/seu/arquivo.pdf"
 DECK_NAME      = "Meu Deck de Revisão"
 OUTPUT_APKG    = "flashcards.apkg"
 ```
 
-### 2. Execute
+### 3. Executar
 
 ```bash
-python anki_generator.py
+python scripts/anki_generator.py
 ```
 
-### 3. Importe no Anki
+### 4. Importar no Anki
 
 ```
 Anki → Arquivo → Importar → flashcards.apkg
@@ -54,49 +97,59 @@ Anki → Arquivo → Importar → flashcards.apkg
 
 ---
 
-## 🤖 Usar como Agente (Gemini / Antigravity CLI)
+## 💬 Prompts Recomendados Após Instalação
 
-### Google AI Studio / Gemini Advanced (Gems)
-
-1. Acesse [Google AI Studio](https://aistudio.google.com)
-2. Crie um novo projeto ou Gem
-3. Cole o conteúdo de `prompt_agente.txt` em **System Instructions**
-4. Envie o texto extraído do seu material
-
-### Antigravity CLI
-
-1. Clone este repositório
-2. Copie `agent.md` para o diretório de agentes do seu Antigravity CLI
-3. Ative com: `agy agent use flashcard-architect`
+Após instalar e ativar o agente com `agy agent use flashcard-architect`, use os prompts abaixo como ponto de partida:
 
 ---
 
-## 📦 Exemplo
+### 📄 Para PDF com questões de simulado
 
-**Input:**
-> "Aqui estão minhas anotações de Biologia Celular. Havia uma imagem chamada `mitocondria.png` na página 2. Gere os flashcards das questões que errei."
+```
+Analise o seguinte conteúdo extraído do arquivo [NOME_DO_ARQUIVO.pdf].
+Imagens extraídas automaticamente pelo script: [img_p1_0.png, img_p3_1.png, ...]
+Foco principal: as questões marcadas como ERRADO ou que não soube responder.
+Quebre cada conceito em cards atômicos e siga todas as regras de formatação HTML/CSS dark mode.
 
-**Output (JSON):**
-```json
-[
-  {
-    "pergunta": "Qual organela realiza a respiração celular aeróbica?<br><br><img src=\"mitocondria.png\" style=\"max-width:100%; border-radius:8px;\">",
-    "resposta": "<b>Mitocôndria</b><br><br><i>Justificativa:</i> É nela que ocorrem o <b>Ciclo de Krebs</b> e a <b>Cadeia Respiratória</b>, gerando a maior parte do <b>ATP</b> celular."
-  }
-]
+[COLE AQUI O TEXTO EXTRAÍDO]
 ```
 
 ---
 
-## 📁 Estrutura do Repositório
+### 📝 Para DOCX / anotações de aula
 
 ```
-flashcard-architect-agent/
-├── SKILL.md              # Skill para o Antigravity CLI
-├── agent.md              # Definição do agente (importar no Gemini/AGY)
-├── prompt_agente.txt     # System prompt completo do especialista
-├── anki_generator.py     # Script Python de extração e geração
-└── README.md             # Esta documentação
+Aqui estão minhas anotações do documento [NOME_DO_ARQUIVO.docx] sobre [TEMA].
+Organize os conceitos mais importantes em flashcards atômicos.
+Destaque definições, fórmulas e exemplos práticos usando a formatação HTML correta.
+
+[COLE AQUI O TEXTO EXTRAÍDO]
+```
+
+---
+
+### 📖 Para TXT / Markdown
+
+```
+Transforme o conteúdo abaixo (extraído de [arquivo.md]) em flashcards.
+Priorize: definições, listas numeradas, exemplos e qualquer conceito que exija memorização ativa.
+Use cards atômicos e formatação HTML compatível com dark mode.
+
+[COLE AQUI O CONTEÚDO]
+```
+
+---
+
+### 🎯 Para revisão focada em erros
+
+```
+Abaixo estão apenas as questões que ERREI no simulado de [TEMA].
+Para cada questão:
+1. Crie um card com o enunciado completo na frente
+2. Na resposta, coloque a alternativa correta + justificativa do porquê as outras estão erradas
+3. Se houver referência a imagem (nome indicado no texto), inclua a tag <img> correta
+
+[COLE AQUI AS QUESTÕES QUE ERROU]
 ```
 
 ---
@@ -104,8 +157,8 @@ flashcard-architect-agent/
 ## ⚠️ Segurança
 
 - **Nunca** suba sua `GEMINI_API_KEY` para o repositório
-- Use variáveis de ambiente: `export GEMINI_API_KEY="sua-chave"`
-- Adicione `.env` ao seu `.gitignore`
+- Use variáveis de ambiente: `set GEMINI_API_KEY=sua-chave` (Windows)
+- O `.gitignore` já está configurado para ignorar `.env` e arquivos sensíveis
 
 ---
 
