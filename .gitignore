@@ -1,0 +1,26 @@
+# API Keys e configurações sensíveis
+.env
+*.env
+config.local.py
+
+# Mídia gerada
+anki_media/
+
+# Saídas geradas
+*.apkg
+*.pdf
+*.docx
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Sistema
+.DS_Store
+Thumbs.db
