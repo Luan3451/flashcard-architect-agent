@@ -16,13 +16,24 @@ anki_media/
 # Python
 __pycache__/
 *.py[cod]
+*.pyo
 *.egg-info/
+*.egg
 dist/
 build/
 .venv/
 venv/
 env/
+.eggs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Sistema
 .DS_Store
 Thumbs.db
+Desktop.ini

@@ -1,9 +1,9 @@
-# 🧠 Flashcard Architect Agent
+# 🧠 Flashcard Architect
 
-> Plugin para o **Antigravity CLI** — Especialista em transformar qualquer material de estudo em flashcards de alta retenção para o Anki.
+> Plugin para **Antigravity CLI** — Transforma documentos de estudo em flashcards Anki de alta retenção com imagens, formatação dark mode e `.apkg` pronto para importar.
 
 [![Antigravity Plugin](https://img.shields.io/badge/Antigravity-Plugin-blue)](https://github.com/Luan3451/flashcard-architect-agent)
-[![Version](https://img.shields.io/badge/version-1.1.0-green)](https://github.com/Luan3451/flashcard-architect-agent)
+[![Version](https://img.shields.io/badge/version-2.0.0-green)](https://github.com/Luan3451/flashcard-architect-agent)
 
 ---
 
@@ -11,12 +11,14 @@
 
 | Recurso | Detalhes |
 |---|---|
-| 📄 **Formatos suportados** | `PDF`, `DOCX`, `TXT`, `Markdown` |
-| 🖼️ **Gestão de imagens** | Extrai e embutidas automaticamente nos cards via `<img src="...">` |
-| 🎨 **Formatação rica** | HTML/CSS nativo com dark mode, negritos, listas, blocos de código |
-| 🧠 **IA especialista** | Gemini 2.5 Flash com system prompt otimizado para aprendizagem |
-| 📦 **Saída estruturada** | JSON válido → `.apkg` pronto para importar no Anki |
-| ⚙️ **FSRS Ready** | Cards atômicos otimizados para repetição espaçada |
+| 📄 **Formatos** | `PDF`, `DOCX`, `TXT`, `Markdown` |
+| 🖼️ **Imagens** | Extrai de PDFs e DOCXs automaticamente, embutidas via `<img>` |
+| 🎨 **Dark mode** | HTML/CSS nativo com fundo escuro, código verde, tipografia limpa |
+| 🧠 **IA** | Gemini 2.5 Flash com system prompt otimizado para flashcards |
+| 📦 **Saída** | `.apkg` pronto para importar no Anki com mídias embutidas |
+| ⚙️ **FSRS** | Cards atômicos otimizados para repetição espaçada |
+| 🔄 **Retry** | Retry automático com backoff em caso de erro do Gemini |
+| ✅ **Validação** | Filtra cards incompletos ou malformados automaticamente |
 
 ---
 
@@ -24,141 +26,131 @@
 
 ```
 flashcard-architect-agent/
-├── plugin.json                          ← Manifesto do plugin (Antigravity)
+├── plugin.json                          ← Manifesto (Antigravity CLI)
 ├── agents/
-│   └── flashcard-architect.md           ← Definição do agente
+│   └── flashcard-architect.md           ← Agente especialista
 ├── skills/
 │   └── flashcard-architect/
-│       └── SKILL.md                     ← Skill completa com workflow
+│       └── SKILL.md                     ← Skill com workflow completo
 ├── scripts/
-│   └── anki_generator.py                ← Script Python de extração e geração
-├── prompt_agente.txt                    ← System prompt puro (para AI Studio/Gems)
-└── README.md                            ← Esta documentação
+│   └── anki_generator.py               ← Script Python CLI
+├── prompt_agente.txt                    ← System prompt (AI Studio/Gems)
+└── README.md
 ```
 
 ---
 
-## ⚙️ Instalação no Antigravity CLI
+## ⚙️ Instalação
+
+### Antigravity CLI
 
 ```bash
 agy plugin install https://github.com/Luan3451/flashcard-architect-agent
 ```
 
-> Quando solicitado, confirme com **Y** (o comando está na Deny List de segurança do AGY por padrão).
-
-Verifique a instalação:
+Verifique:
 
 ```bash
 agy plugin validate flashcard-architect
 agy plugin list
 ```
 
----
-
-## 🛠️ Configuração e Uso do Script Python
-
-### 1. Instalar dependências
+### Dependências Python (para o script)
 
 ```bash
 pip install PyMuPDF genanki google-generativeai python-docx
 ```
 
-### 2. Configurar variáveis de ambiente (recomendado)
+---
 
-**Windows:**
+## 🛠️ Uso
+
+### Opção 1: Script Python (gera o .apkg)
+
+Configure a API key:
+
 ```cmd
-set GEMINI_API_KEY=sua-api-key-gemini
+set GEMINI_API_KEY=sua-api-key-aqui
 ```
 
-**Linux/macOS:**
-```bash
-export GEMINI_API_KEY="sua-api-key-gemini"
-```
-
-Ou edite diretamente no topo do `scripts/anki_generator.py`:
-```python
-GEMINI_API_KEY = "sua-api-key-gemini"   # https://aistudio.google.com/app/apikey
-INPUT_PATH     = "caminho/para/seu/arquivo.pdf"
-DECK_NAME      = "Meu Deck de Revisão"
-OUTPUT_APKG    = "flashcards.apkg"
-```
-
-### 3. Executar
+Execute:
 
 ```bash
-python scripts/anki_generator.py
+# PDF de simulado
+python scripts/anki_generator.py --input "C:\Docs\simulado.pdf" --deck "Revisão Redes" --output revisao.apkg
+
+# DOCX de anotações
+python scripts/anki_generator.py --input anotacoes.docx --deck "Bio Celular"
+
+# Markdown com chunk menor (para textos densos)
+python scripts/anki_generator.py --input resumo.md --chunk-size 10
+
+# Ver versão
+python scripts/anki_generator.py --version
 ```
 
-### 4. Importar no Anki
+Depois importe: `Anki → Arquivo → Importar → [arquivo].apkg`
 
-```
-Anki → Arquivo → Importar → flashcards.apkg
-```
+### Opção 2: Agente no Antigravity CLI
 
----
-
-## 💬 Prompts Recomendados Após Instalação
-
-Após instalar e ativar o agente com `agy agent use flashcard-architect`, use os prompts abaixo como ponto de partida:
-
----
-
-### 📄 Para PDF com questões de simulado
-
-```
-Analise o seguinte conteúdo extraído do arquivo [NOME_DO_ARQUIVO.pdf].
-Imagens extraídas automaticamente pelo script: [img_p1_0.png, img_p3_1.png, ...]
-Foco principal: as questões marcadas como ERRADO ou que não soube responder.
-Quebre cada conceito em cards atômicos e siga todas as regras de formatação HTML/CSS dark mode.
-
-[COLE AQUI O TEXTO EXTRAÍDO]
+```bash
+agy agent use flashcard-architect
 ```
 
 ---
 
-### 📝 Para DOCX / anotações de aula
+## 💬 Prompts Recomendados
+
+Após ativar o agente, use estes prompts como ponto de partida:
+
+### 📄 Simulado PDF (foco em erros)
 
 ```
-Aqui estão minhas anotações do documento [NOME_DO_ARQUIVO.docx] sobre [TEMA].
-Organize os conceitos mais importantes em flashcards atômicos.
-Destaque definições, fórmulas e exemplos práticos usando a formatação HTML correta.
+Analise o conteúdo extraído do arquivo simulado_redes.pdf.
+Imagens extraídas: img_p1_0.png, img_p3_1.png, img_p12_0.png.
+Foco: SOMENTE as questões que errei (marcadas como ERRADO).
+Para cada erro: enunciado na frente + resposta correta com justificativa.
 
-[COLE AQUI O TEXTO EXTRAÍDO]
+[COLE O TEXTO EXTRAÍDO]
 ```
 
----
-
-### 📖 Para TXT / Markdown
+### 📝 Anotações DOCX
 
 ```
-Transforme o conteúdo abaixo (extraído de [arquivo.md]) em flashcards.
-Priorize: definições, listas numeradas, exemplos e qualquer conceito que exija memorização ativa.
-Use cards atômicos e formatação HTML compatível com dark mode.
+Transforme estas anotações de biologia_celular.docx em flashcards atômicos.
+Priorize: definições, processos e exemplos práticos.
+Imagem: mitocondria.png (respiração celular).
 
-[COLE AQUI O CONTEÚDO]
+[COLE O TEXTO]
 ```
 
----
-
-### 🎯 Para revisão focada em erros
+### 🎯 Revisão focada em erros
 
 ```
-Abaixo estão apenas as questões que ERREI no simulado de [TEMA].
-Para cada questão:
-1. Crie um card com o enunciado completo na frente
-2. Na resposta, coloque a alternativa correta + justificativa do porquê as outras estão erradas
-3. Se houver referência a imagem (nome indicado no texto), inclua a tag <img> correta
+Questões que errei no simulado de Segurança da Informação.
+Para cada uma: card com enunciado + alternativa correta + justificativa.
+Se tiver topologia/imagem, inclua <img src="...">.
 
-[COLE AQUI AS QUESTÕES QUE ERROU]
+[QUESTÕES ERRADAS]
+```
+
+### 📖 Markdown / TXT
+
+```
+Transforme o conteúdo abaixo em flashcards atômicos.
+Priorize definições, listas e conceitos que exijam memorização ativa.
+Formatação HTML dark mode obrigatória.
+
+[CONTEÚDO]
 ```
 
 ---
 
 ## ⚠️ Segurança
 
-- **Nunca** suba sua `GEMINI_API_KEY` para o repositório
-- Use variáveis de ambiente: `set GEMINI_API_KEY=sua-chave` (Windows)
-- O `.gitignore` já está configurado para ignorar `.env` e arquivos sensíveis
+- **Nunca** suba `GEMINI_API_KEY` para o repositório
+- Use variável de ambiente: `set GEMINI_API_KEY=sua-chave` (Windows)
+- O `.gitignore` protege `.env`, `*.apkg` e `anki_media/`
 
 ---
 
