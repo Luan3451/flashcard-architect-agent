@@ -14,24 +14,11 @@
 # ///
 # -*- coding: utf-8 -*-
 """
-Flashcard Architect v3.1.0 — Pipeline Zero-Touch Nativo Antigravity (.apkg)
+anki_generator.py — v3.1.0 (Antigravity Native Edition)
+Pipeline completo com Wizard Interativo, Bypass condicional de mídias e Prompts adaptativos.
 Zero dependência de APIs externas (sem Google AI Studio / sem GEMINI_API_KEY).
 Utiliza exclusivamente o ecossistema Antigravity (Antigravity CLI / IDE / APP)
 com o modelo Gemini 3.8 Flash (High reasoning effort).
-
-Recursos de Alta Confiabilidade:
-- Auto-bootstrapper de ambiente (instalação transparente de dependências)
-- Auto-descoberta do binário Antigravity CLI (agy)
-- Content-Addressed Storage com conversão para WebP (anti-colisão de mídias globais no Anki)
-- Deck IDs determinísticos de 31 bits baseados no nome do baralho (anti-fusão de decks)
-- Suporte nativo a cartões Básicos e cartões Cloze ({{c1::...}}) com modelos dedicados
-- GUIDs determinísticos desacoplados de typos na pergunta via `id_conceito`
-- Suporte a diagramas vetoriais em PDFs via `page.cluster_drawings()` e OCR offline via RapidOCR
-- Extração de imagens DOCX com vinculação de posição exata nos parágrafos
-- Chunking dinâmico com janela deslizante (15% de sobreposição) para evitar perda de contexto
-- Validação e auto-reparo de JSON com Pydantic e json_repair
-- Integração opcional com AnkiConnect (localhost:8765) + Auto-open de .apkg
-- Modo Watchdog (--watch) para monitoramento contínuo de pastas Dropzone
 """
 
 import argparse
@@ -49,18 +36,17 @@ import subprocess
 import sys
 import time
 
-# Força UTF-8 no stdout/stderr no Windows
-if sys.platform.startswith("win"):
+# Força UTF-8 no Windows para evitar UnicodeEncodeError ('charmap')
+if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
-# ════════════════════════════════════════════
+# ---------------------------------------------------------------------------
 # 1. AUTO-BOOTSTRAPPER E AUTO-PROVISIONAMENTO
-# ════════════════════════════════════════════
-
+# ---------------------------------------------------------------------------
 REQUIRED_PACKAGES = {
     "genanki": "genanki>=0.13.0",
     "fitz": "pymupdf>=1.23.0",
@@ -68,8 +54,6 @@ REQUIRED_PACKAGES = {
     "PIL": "Pillow>=10.0.0",
     "pydantic": "pydantic>=2.7.0",
     "json_repair": "json-repair>=0.25.0",
-    "watchdog": "watchdog>=4.0.0",
-    "rapidocr_onnxruntime": "rapidocr-onnxruntime>=1.2.0",
 }
 
 def bootstrap_environment() -> None:
@@ -147,17 +131,10 @@ try:
 except ImportError:
     RAPID_OCR_AVAILABLE = False
 
-# ════════════════════════════════════════════
-# LOGGING
-# ════════════════════════════════════════════
-
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("flashcard-architect")
 
-# ════════════════════════════════════════════
-# CONSTANTES
-# ════════════════════════════════════════════
-
+# Constantes do sistema
 VERSION = "3.1.0"
 MEDIA_DIR = "anki_media"
 MAX_RETRIES = 3
@@ -165,57 +142,96 @@ RETRY_DELAY_SECS = 4
 DEFAULT_MODEL = "gemini-3.8-flash-high"
 DEFAULT_EFFORT = "high"
 
-# Model IDs estáticos para compartilhar tipo de nota e CSS
 MODEL_BASIC_ID = 1607392319
 MODEL_CLOZE_ID = 1607392320
 
-def get_deterministic_id(name: str) -> int:
+# ---------------------------------------------------------------------------
+# 2. GERADOR DETERMINÍSTICO DE DECK ID
+# ---------------------------------------------------------------------------
+def get_deck_id(deck_name: str) -> int:
     """Gera um inteiro positivo de 31 bits único e determinístico a partir do nome do deck."""
-    hash_hex = hashlib.sha256(name.strip().lower().encode("utf-8")).hexdigest()
-    return int(hash_hex[:8], 16) & 0x7FFFFFFF
+    digest = hashlib.sha256(deck_name.strip().lower().encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) & 0x7FFFFFFF
 
-# ════════════════════════════════════════════
-# PROMPT MESTRE ENXUTO (ZERO CSS INLINE)
-# ════════════════════════════════════════════
+# ---------------------------------------------------------------------------
+# 3. MATRIZ DE PROMPTS ADAPTATIVOS (Curadoria vs. Fidelidade Estrita vs. Exame)
+# ---------------------------------------------------------------------------
+MODE_INSTRUCTIONS = {
+    "curated": (
+        "MODO CURADORIA & ALTA RECORRÊNCIA (80/20):\n"
+        "- Filtre textos introdutórios irrelevantes, históricos prolixos ou exemplos redundantes.\n"
+        "- Priorize os conceitos mais cobrados em provas e certificações, definições-chave, "
+        "arquiteturas, comandos e diferenciações críticas.\n"
+        "- Reescreva o conteúdo em perguntas atômicas, diretas e autossuficientes."
+    ),
+    "strict": (
+        "MODO FIDELIDADE ESTRITA À FONTE (PROVAS / SIMULADOS / NORMAS):\n"
+        "- NÃO omita tópicos e NÃO altere o sentido ou a terminologia exata do texto-fonte.\n"
+        "- Se o texto de entrada contiver questões de prova ou simulado, preserve fielmente o cenário, "
+        "o comando da questão e os termos técnicos originais na FRENTE do cartão.\n"
+        "- No VERSO, apresente o gabarito exato seguido da justificativa técnica detalhada de cada item."
+    ),
+    "exam": (
+        "MODO AUDITORIA DE ERROS E PEGADINHAS DE PROVA:\n"
+        "- Analise cada questão ou tópico identificando as pegadinhas clássicas e alternativas incorretas.\n"
+        "- Crie cartões que confrontem o erro comum (ex: 'No contexto X, por que a afirmativa Y é falsa ou incorreta?').\n"
+        "- Explique no verso a causa exata do erro e qual seria a configuração/conceito correto."
+    ),
+}
 
-SYSTEM_PROMPT = """
-Você é o Flashcard Architect — especialista em ciência cognitiva, active recall e algoritmo FSRS do Anki.
+DENSITY_INSTRUCTIONS = {
+    "essential": "DENSIDADE ESSENCIAL: Gere apenas os cartões indispensáveis (1 a 2 cartões por seção/página).",
+    "high": "DENSIDADE EXAUSTIVA: Extraia o máximo de cartões atômicos possíveis cobrindo cada detalhe, tabela, exceção e observação técnica (3 a 6 cartões por seção/página).",
+}
 
-OBJETIVO:
-Transformar o material fornecido em flashcards atômicos de altíssima retenção.
+def build_master_prompt(mode: str, density: str, use_media: bool, card_style: str) -> str:
+    media_rule = (
+        "4. GESTÃO DE IMAGENS ATIVA:\n"
+        "   - Sempre que o texto indicar '[Imagem extraída: nome_arquivo.ext]', associe-a ao cartão correspondente usando:\n"
+        "     <br><img src=\"nome_arquivo.ext\">\n"
+        "   - Coloque na FRENTE se for diagrama de enunciado/topologia, ou no VERSO se for resolução explicativa."
+        if use_media
+        else "4. MODO SOMENTE TEXTO:\n"
+             "   - Ignore referências a figuras externas e NÃO inclua tags <img>."
+    )
 
-REGRAS DE ENGENHARIA COGNITIVA:
-1. ATOMICIDADE ESTRITA: Cada cartão deve testar UMA ÚNICA associação mental. Divida conceitos complexos em múltiplos cartões atômicos.
-2. ÂNCORA DE CONTEXTO: Enunciados 100% autossuficientes. Nunca use pronomes vagos ("Qual a função dele?"). Sempre especifique o domínio ("No protocolo OSPF, qual a função do pacote Hello?").
-3. JUSTIFICATIVA TÉCNICA: No verso, após a resposta direta, inclua sempre uma justificativa concisa explicando a causa/efeito ou o erro das alternativas incorretas.
-4. FORMATAÇÃO HTML LIMPA (NÃO USE ATRIBUTOS style="" INLINE):
-   - Gabarito/Resposta principal: <span class="ans">resposta direta</span>
-   - Destaques e palavras-chave: <b>termo</b>
-   - Termos técnicos / siglas: <i>conceito</i>
-   - Comandos, portas, caminhos e código: <code>comando</code>
-   - Imagens contextuais: <br><img src="nome_exato_da_imagem.ext"> (coloque na frente se for essencial para responder; no verso se for diagrama de solução)
-   - Cartões de lacuna (Cloze): Se fizer mais sentido ocultar termos literais, use {{c1::termo}} na pergunta.
-5. IDENTIFICADORES E TAGS:
+    cloze_rule = (
+        "- Para listas curtas, portas, comandos ou parâmetros exatos, você pode destacar lacunas no formato Cloze ({{c1::termo}}) na pergunta."
+        if card_style == "hybrid"
+        else "- Formule todas as notas estritamente no formato Pergunta Direta (frente) e Resposta + Justificativa (verso)."
+    )
+
+    return f"""Você é o Flashcard Architect — especialista em aprendizagem ativa e algoritmo FSRS do Anki.
+
+{MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS["curated"])}
+{DENSITY_INSTRUCTIONS.get(density, DENSITY_INSTRUCTIONS["high"])}
+{cloze_rule}
+
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
+1. FRENTE (pergunta): Enunciado claro, objetivo e autossuficiente (sem pronomes soltos). Cada cartão deve testar rigorosamente UMA ÚNICA associação mental.
+2. VERSO (resposta): Gabarito direto dentro de <span class="ans"><b>Resposta direta</b></span> seguido de <br><br><i>Justificativa:</i> com explicação técnica concisa e sólida.
+3. ESTILOS HTML PERMITIDOS (NÃO USE style="" INLINE): <b>termo</b>, <i>conceito</i>, <code>comando/porta</code>, <ul><li>item</li></ul>, <br>.
+{media_rule}
+5. METADADOS OBRIGATÓRIOS:
    - "id_conceito": crie um identificador estável em snake_case (ex: "redes_bgp_keepalive_objetivo").
    - "tags": gere de 1 a 3 tags curtas em snake_case identificando o tópico (ex: ["redes", "bgp"]).
    - "suggested_deck": sugira uma taxonomia hierárquica no formato "Categoria::Subcategoria::Assunto".
 
-SAÍDA EXCLUSIVA (Retorne APENAS um Array JSON válido ou objeto JSON, sem blocos markdown):
+6. SAÍDA EXCLUSIVA: Retorne APENAS um array JSON puro (sem blocos ```json, sem introduções ou saudações):
 [
-  {
+  {{
     "id_conceito": "redes_bgp_keepalive_objetivo",
     "pergunta": "No protocolo <b>BGP</b>, qual é o objetivo da mensagem <i>Keepalive</i> e seu intervalo padrão de envio?",
-    "resposta": "<span class=\"ans\">Manter a sessão ativa entre peers (60 segundos).</span><br><br><i>Justificativa:</i> Confirma a alcançabilidade da sessão TCP na porta <code>179</code> antes que o <i>Hold Timer</i> expire.",
+    "resposta": "<span class=\\"ans\\"><b>Manter a sessão ativa entre peers (60 segundos).</b></span><br><br><i>Justificativa:</i> Confirma a alcançabilidade da sessão TCP na porta <code>179</code> antes que o <i>Hold Timer</i> expire.",
     "tags": ["redes", "bgp"],
     "suggested_deck": "Tecnologia::Redes::Roteamento_Avancado"
-  }
+  }}
 ]
-""".strip()
+"""
 
-# ════════════════════════════════════════════
-# CSS DARK MODE PROFISSIONAL (COM CORREÇÃO DE ESPECIFICIDADE)
-# ════════════════════════════════════════════
-
+# ---------------------------------------------------------------------------
+# 4. FOLHA DE ESTILOS CSS DARK MODE NATIVA
+# ---------------------------------------------------------------------------
 ANKI_CSS = """
 .card {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -243,7 +259,6 @@ hr#answer {
     border-top: 1px solid #3d444d;
     margin: 18px 0;
 }
-/* Destaque padrão azul para palavras-chave gerais */
 b, strong { color: #58a6ff; font-weight: 600; }
 i, em { color: #f0883e; }
 
@@ -253,13 +268,11 @@ i, em { color: #f0883e; }
     font-weight: 700;
 }
 
-/* Lacunas Cloze */
 .cloze {
     font-weight: 700;
     color: #4af626 !important;
 }
 
-/* Bloco opcional para Justificativa */
 .justificativa {
     margin-top: 12px;
     padding: 10px 14px;
@@ -319,30 +332,25 @@ th {
 }
 """.strip()
 
-# ════════════════════════════════════════════
-# 2. CONTENT-ADDRESSED STORAGE & IMAGENS WEBP
-# ════════════════════════════════════════════
+# ---------------------------------------------------------------------------
+# 5. PIPELINE DE EXTRAÇÃO CONDICIONAL (LAZY MEDIA EXTRACTION)
+# ---------------------------------------------------------------------------
+def ensure_media_dir() -> Path:
+    p = Path(MEDIA_DIR)
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
-def ensure_media_dir() -> str:
-    os.makedirs(MEDIA_DIR, exist_ok=True)
-    return MEDIA_DIR
-
-def save_normalized_image(img_bytes: bytes, min_dim: int = 80) -> str | None:
-    """
-    Filtra ruídos, converte para WebP e nomeia por hash SHA-256 (anti-colisão global no Anki).
-    Gera filenames únicos no padrão: ag_{hash[:12]}.webp
-    """
-    if len(img_bytes) < 2048:  # Ignora arquivos/ícones menores que 2KB
+def save_normalized_image(img_bytes: bytes, min_dim: int = 60) -> str | None:
+    """Filtra ruídos, converte para WebP e nomeia por hash SHA-256 (anti-colisão global)."""
+    if len(img_bytes) < 2048:
         return None
 
-    ensure_media_dir()
     try:
         if PIL_AVAILABLE:
             with Image.open(BytesIO(img_bytes)) as im:
                 w, h = im.size
                 if w < min_dim or h < min_dim:
                     return None
-                # Ignora faixas e linhas divisórias extremas (proporção > 12:1)
                 if (w / max(h, 1)) > 12 or (h / max(w, 1)) > 12:
                     return None
 
@@ -356,257 +364,285 @@ def save_normalized_image(img_bytes: bytes, min_dim: int = 80) -> str | None:
         filename = f"ag_{img_hash}.webp"
         filepath = os.path.join(MEDIA_DIR, filename)
 
+        ensure_media_dir()
         if not os.path.exists(filepath):
             with open(filepath, "wb") as f:
                 f.write(webp_bytes)
 
         return filename
     except Exception as e:
-        log.debug(f"Erro ao processar imagem: {e}")
+        log.debug(f"Aviso ao normalizar imagem: {e}")
         return None
 
-def extract_vector_diagrams(page: fitz.Page) -> list[str]:
-    """Captura diagramas vetoriais e tabelas agrupadas que não são bitmaps XRef simples."""
-    saved = []
-    try:
-        drawings = page.cluster_drawings()
-        for rect in drawings:
-            if rect.width >= 100 and rect.height >= 80:
-                pix = page.get_pixmap(clip=rect, dpi=200)
-                fname = save_normalized_image(pix.tobytes("png"))
-                if fname and fname not in saved:
-                    saved.append(fname)
-    except Exception as e:
-        log.debug(f"Aviso em cluster_drawings: {e}")
-    return saved
-
-# ════════════════════════════════════════════
-# 3. EXTRAÇÃO DE CONTEÚDO (PDF, MD, DOCX, TXT)
-# ════════════════════════════════════════════
-
-def ocr_page_if_needed(page: fitz.Page) -> str:
-    """Executa OCR offline transparente com RapidOCR se a página tiver pouco texto nativo."""
-    text = page.get_text("text").strip()
-    if len(text) >= 40 or not RAPID_OCR_AVAILABLE:
-        return text
-
-    try:
-        pix = page.get_pixmap(dpi=200)
-        img_bytes = pix.tobytes("png")
-        ocr_engine = RapidOCR()
-        result, _ = ocr_engine(img_bytes)
-        if result:
-            ocr_text = "\n".join([line[1] for line in result])
-            log.info(f"      [OCR Offline] Extraídos {len(ocr_text)} caracteres da imagem da página.")
-            return ocr_text
-    except Exception as e:
-        log.debug(f"Falha no OCR offline: {e}")
-
-    return text
-
-def extract_from_pdf(path: str) -> tuple[list[str], list[str]]:
-    """Extrai texto, bitmaps XRef e diagramas vetoriais de um arquivo PDF com deduplicação por hash."""
+def extract_pdf_content(pdf_path: str, use_media: bool) -> tuple[list[str], list[str]]:
+    """Extrai conteúdo de PDF. Se use_media=False, pula totalmente o PyMuPDF de imagens (modo turbo)."""
     if fitz is None:
         log.error("[ERRO] PyMuPDF não está instalado. Execute: pip install PyMuPDF")
         sys.exit(1)
 
-    ensure_media_dir()
-    doc = fitz.open(path)
-    pages_text = []
+    doc = fitz.open(pdf_path)
+    pages_content = []
     media_files = []
     seen_hashes = set()
 
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        page_text = ocr_page_if_needed(page)
+    for page_idx, page in enumerate(doc):
+        text = page.get_text("text").strip()
+        extracted_tags = []
 
-        if not page_text.strip():
-            page_text = f"[Página {page_num + 1}: sem texto extraível]\n"
-        else:
-            page_text += f"\n[Fim da Página {page_num + 1}]\n"
-
-        # 1. Extração de Bitmaps XRef
-        for img_info in page.get_images(full=True):
+        # OCR transparente em páginas escaneadas se tiver muito pouco texto
+        if len(text) < 40 and RAPID_OCR_AVAILABLE:
             try:
-                xref = img_info[0]
-                base_image = doc.extract_image(xref)
-                image_bytes = base_image["image"]
+                pix = page.get_pixmap(dpi=200)
+                ocr_engine = RapidOCR()
+                result, _ = ocr_engine(pix.tobytes("png"))
+                if result:
+                    text = "\n".join([line[1] for line in result])
+                    log.info(f"      [OCR Offline] Extraídos {len(text)} caracteres na pág. {page_idx + 1}")
+            except Exception:
+                pass
 
-                fname = save_normalized_image(image_bytes)
-                if fname:
-                    fpath = os.path.join(MEDIA_DIR, fname)
-                    if fpath not in media_files:
-                        media_files.append(fpath)
-                    if fname not in seen_hashes:
-                        seen_hashes.add(fname)
-                        page_text += f"\n[Imagem extraída nesta página: {fname}]\n"
-            except Exception as e:
-                log.debug(f"Erro em imagem XRef pág. {page_num + 1}: {e}")
+        # SÓ executa varredura de imagem e diagramas vetoriais se use_media for True
+        if use_media:
+            # 1. Bitmaps XRef
+            for img_info in page.get_images(full=True):
+                try:
+                    xref = img_info[0]
+                    base_img = doc.extract_image(xref)
+                    img_bytes = base_img["image"]
+                    fname = save_normalized_image(img_bytes)
+                    if fname:
+                        fpath = os.path.join(MEDIA_DIR, fname)
+                        if fpath not in media_files:
+                            media_files.append(fpath)
+                        if fname not in seen_hashes:
+                            seen_hashes.add(fname)
+                            extracted_tags.append(f"[Imagem extraída: {fname}]")
+                except Exception:
+                    pass
 
-        # 2. Extração de Agrupamentos Vetoriais
-        vector_images = extract_vector_diagrams(page)
-        for vname in vector_images:
-            vpath = os.path.join(MEDIA_DIR, vname)
-            if vpath not in media_files:
-                media_files.append(vpath)
-            if vname not in seen_hashes:
-                seen_hashes.add(vname)
-                page_text += f"\n[Diagrama vetorial extraído nesta página: {vname}]\n"
+            # 2. Agrupamentos Vetoriais (cluster_drawings)
+            try:
+                for rect in page.cluster_drawings():
+                    if rect.width >= 100 and rect.height >= 80:
+                        pix = page.get_pixmap(clip=rect, dpi=200)
+                        vname = save_normalized_image(pix.tobytes("png"))
+                        if vname:
+                            vpath = os.path.join(MEDIA_DIR, vname)
+                            if vpath not in media_files:
+                                media_files.append(vpath)
+                            if vname not in seen_hashes:
+                                seen_hashes.add(vname)
+                                extracted_tags.append(f"[Imagem extraída: {vname}]")
+            except Exception:
+                pass
 
-        pages_text.append(page_text)
+        page_block = f"--- PÁGINA {page_idx + 1} ---\n{text}"
+        if extracted_tags:
+            page_block += "\n" + "\n".join(extracted_tags)
+        pages_content.append(page_block)
 
-    log.info(f"      → PDF: {len(doc)} página(s), {len(media_files)} imagem(ns) e diagrama(s) normalizados.")
-    return pages_text, media_files
+    mode_label = f"{len(media_files)} imagem(ns) coletada(s)" if use_media else "Modo Turbo (Sem Imagens)"
+    log.info(f"      → PDF: {len(doc)} página(s) | {mode_label}.")
+    return pages_content, media_files
 
-def extract_from_docx(path: str) -> tuple[list[str], list[str]]:
-    """Extrai texto e imagens de DOCX preservando a posição exata de cada imagem nos parágrafos."""
+def extract_docx_content(docx_path: str, use_media: bool) -> tuple[list[str], list[str]]:
+    """Extrai texto e imagens de DOCX. Se use_media=False, pula leitura de mídias binárias."""
     if not DOCX_AVAILABLE:
         log.error("[ERRO] python-docx não instalado. Execute: pip install python-docx")
         sys.exit(1)
 
-    ensure_media_dir()
-    doc = DocxDocument(path)
+    doc = DocxDocument(docx_path)
     media_files = []
     paragraphs_text = []
 
     for para in doc.paragraphs:
         p_text = para.text.strip()
-        # Busca imagens inline via XPath sequencial no XML do parágrafo
-        try:
-            blips = para._element.xpath('.//a:blip/@r:embed')
-            for r_id in blips:
-                rel = doc.part.rels.get(r_id)
-                if rel and "image" in rel.reltype:
-                    image_bytes = rel.target_part.blob
-                    fname = save_normalized_image(image_bytes)
-                    if fname:
-                        fpath = os.path.join(MEDIA_DIR, fname)
-                        if fpath not in media_files:
-                            media_files.append(fpath)
-                        p_text += f"\n[Imagem extraída nesta posição: {fname}]\n"
-        except Exception as e:
-            log.debug(f"Aviso no parse de XML do DOCX: {e}")
+        if use_media:
+            try:
+                blips = para._element.xpath('.//a:blip/@r:embed')
+                for r_id in blips:
+                    rel = doc.part.rels.get(r_id)
+                    if rel and "image" in rel.reltype:
+                        img_bytes = rel.target_part.blob
+                        fname = save_normalized_image(img_bytes)
+                        if fname:
+                            fpath = os.path.join(MEDIA_DIR, fname)
+                            if fpath not in media_files:
+                                media_files.append(fpath)
+                            p_text += f"\n[Imagem extraída: {fname}]\n"
+            except Exception:
+                pass
 
         if p_text:
             paragraphs_text.append(p_text)
 
     full_text = "\n\n".join(paragraphs_text)
-    log.info(f"      → DOCX: {len(paragraphs_text)} parágrafo(s), {len(media_files)} imagem(ns) contextualizada(s).")
+    mode_label = f"{len(media_files)} imagem(ns)" if use_media else "Modo Turbo (Sem Imagens)"
+    log.info(f"      → DOCX: {len(paragraphs_text)} parágrafo(s) | {mode_label}.")
     return [full_text], media_files
 
-def extract_from_markdown(path: str, attach_dir: str | None = None) -> tuple[list[str], list[str]]:
-    """Extrai texto de Markdown, converte imagens referenciadas para WebP normalizado e vincula ao texto."""
-    ensure_media_dir()
-    md_dir = os.path.dirname(os.path.abspath(path))
+def extract_markdown_content(md_path: str, use_media: bool, attach_dir: str | None = None) -> tuple[list[str], list[str]]:
+    """Extrai conteúdo de Markdown. Se use_media=False, preserva o texto sem copiar arquivos."""
+    md_dir = os.path.dirname(os.path.abspath(md_path))
     content = ""
     for enc in ["utf-8", "latin-1", "cp1252"]:
         try:
-            with open(path, "r", encoding=enc) as f:
+            with open(md_path, "r", encoding=enc) as f:
                 content = f.read()
             break
         except UnicodeDecodeError:
             continue
 
     media_files = []
-    search_dirs = [md_dir]
-    if attach_dir and os.path.exists(attach_dir):
-        search_dirs.append(attach_dir)
-    for sub in ["attachments", "anexos", "media", "images", "img", "assets"]:
-        cand = os.path.join(md_dir, sub)
-        if os.path.exists(cand):
-            search_dirs.append(cand)
+    if use_media:
+        search_dirs = [md_dir]
+        if attach_dir and os.path.exists(attach_dir):
+            search_dirs.append(attach_dir)
+        for sub in ["attachments", "anexos", "media", "images", "img", "assets"]:
+            cand = os.path.join(md_dir, sub)
+            if os.path.exists(cand):
+                search_dirs.append(cand)
 
-    # Localiza referências ![alt](caminho) e <img src="caminho">
-    md_pattern = re.compile(r'!\[(.*?)\]\((.*?)\)')
-    html_pattern = re.compile(r'<img[^>]+src=["\'](.*?)["\']', re.IGNORECASE)
+        md_pattern = re.compile(r'!\[(.*?)\]\((.*?)\)')
+        html_pattern = re.compile(r'<img[^>]+src=["\'](.*?)["\']', re.IGNORECASE)
 
-    found_refs = []
-    for m in md_pattern.finditer(content):
-        found_refs.append(m.group(2).strip())
-    for m in html_pattern.finditer(content):
-        found_refs.append(m.group(1).strip())
+        found_refs = []
+        for m in md_pattern.finditer(content):
+            found_refs.append(m.group(2).strip())
+        for m in html_pattern.finditer(content):
+            found_refs.append(m.group(1).strip())
 
-    for img_ref in set(found_refs):
-        if img_ref.startswith("http://") or img_ref.startswith("https://"):
-            continue
+        for img_ref in set(found_refs):
+            if img_ref.startswith("http://") or img_ref.startswith("https://"):
+                continue
 
-        resolved = None
-        for s_dir in search_dirs:
-            cand = os.path.normpath(os.path.join(s_dir, img_ref))
-            if os.path.exists(cand) and os.path.isfile(cand):
-                resolved = cand
-                break
+            resolved = None
+            for s_dir in search_dirs:
+                cand = os.path.normpath(os.path.join(s_dir, img_ref))
+                if os.path.exists(cand) and os.path.isfile(cand):
+                    resolved = cand
+                    break
 
-        if resolved:
-            try:
-                with open(resolved, "rb") as f:
-                    img_bytes = f.read()
-                normalized_name = save_normalized_image(img_bytes, min_dim=20)
-                if normalized_name:
-                    dest_path = os.path.join(MEDIA_DIR, normalized_name)
-                    if dest_path not in media_files:
-                        media_files.append(dest_path)
-                    content = content.replace(img_ref, normalized_name)
-            except Exception as e:
-                log.warning(f"  ⚠ Erro ao normalizar mídia {resolved}: {e}")
+            if resolved:
+                try:
+                    with open(resolved, "rb") as f:
+                        b = f.read()
+                    norm = save_normalized_image(b, min_dim=20)
+                    if norm:
+                        p = os.path.join(MEDIA_DIR, norm)
+                        if p not in media_files:
+                            media_files.append(p)
+                        content = content.replace(img_ref, norm)
+                except Exception:
+                    pass
 
-    log.info(f"      → Markdown: {len(content)} caracteres, {len(media_files)} imagem(ns) vinculada(s).")
+    mode_label = f"{len(media_files)} imagem(ns)" if use_media else "Modo Turbo (Sem Imagens)"
+    log.info(f"      → Markdown: {len(content)} caracteres | {mode_label}.")
     return [content], media_files
 
-def extract_from_text(path: str, attach_dir: str | None = None) -> tuple[list[str], list[str]]:
-    """Extrai texto puro e normaliza anexos da pasta informada."""
-    ensure_media_dir()
-    content = ""
-    for enc in ["utf-8", "latin-1", "cp1252"]:
-        try:
-            with open(path, "r", encoding=enc) as f:
-                content = f.read()
-            break
-        except UnicodeDecodeError:
-            continue
-
-    media_files = []
-    if attach_dir and os.path.exists(attach_dir):
-        for root, _, files in os.walk(attach_dir):
-            for file in files:
-                ext = os.path.splitext(file)[1].lower()
-                if ext in {".png", ".jpg", ".jpeg", ".webp", ".svg", ".bmp"}:
-                    fpath = os.path.join(root, file)
-                    try:
-                        with open(fpath, "rb") as f:
-                            b = f.read()
-                        norm = save_normalized_image(b, min_dim=20)
-                        if norm:
-                            p = os.path.join(MEDIA_DIR, norm)
-                            if p not in media_files:
-                                media_files.append(p)
-                    except Exception:
-                        pass
-
-    log.info(f"      → Texto: {len(content)} caracteres, {len(media_files)} anexo(s).")
-    return [content], media_files
-
-def extract_content(path: str, attach_dir: str | None = None) -> tuple[list[str], list[str]]:
-    """Roteador inteligente de extração com suporte completo a formatos."""
+def extract_content(path: str, use_media: bool, attach_dir: str | None = None) -> tuple[list[str], list[str]]:
+    """Roteador inteligente com controle condicional de extração de mídias."""
     ext = os.path.splitext(path)[1].lower()
     if ext == ".pdf":
-        return extract_from_pdf(path)
+        return extract_pdf_content(path, use_media)
     elif ext in [".md", ".markdown"]:
-        return extract_from_markdown(path, attach_dir)
+        return extract_markdown_content(path, use_media, attach_dir)
     elif ext == ".docx":
-        return extract_from_docx(path)
+        return extract_docx_content(path, use_media)
     else:
-        return extract_from_text(path, attach_dir)
+        for enc in ["utf-8", "latin-1", "cp1252"]:
+            try:
+                with open(path, "r", encoding=enc) as f:
+                    content = f.read()
+                return [content], []
+            except UnicodeDecodeError:
+                continue
+        return [""], []
 
-# ════════════════════════════════════════════
-# 4. CHUNKING COM JANELA DESLIZANTE (OVERLAP)
-# ════════════════════════════════════════════
+# ---------------------------------------------------------------------------
+# 6. QUESTIONÁRIO INTERATIVO DE TERMINAL (WIZARD PRÉ-VOO)
+# ---------------------------------------------------------------------------
+def run_interactive_wizard(args: argparse.Namespace) -> argparse.Namespace:
+    """Executa perguntas breves de triagem caso o usuário rode o script sem definir flags explícitas."""
+    if args.non_interactive or args.no_ai:
+        args.mode = args.mode or "curated"
+        args.use_media = True if args.media is True else (False if args.no_media else False)
+        args.density = args.density or "high"
+        args.style = args.style or "qa"
+        return args
 
+    # Se já passou todas as flags principais na linha de comando, não pergunta
+    if args.mode and (args.media or args.no_media) and args.density and args.style:
+        args.use_media = True if args.media else False
+        return args
+
+    print("\n" + "=" * 68)
+    print("🧠 FLASHCARD ARCHITECT — CONFIGURAÇÃO RÁPIDA DO BARALHO (WIZARD)")
+    print("=" * 68)
+    print("👉 Dica: Você pode responder todas as perguntas de uma vez separadas por vírgula")
+    print("   (ex: '1, 2, 1, 2' para Curadoria + Sem Imagens + P/R + Exaustivo) ou teclar Enter para padrão.\n")
+
+    quick_input = input("⚡ Configuração Rápida em linha única [Enter para responder passo a passo]: ").strip()
+    if quick_input and "," in quick_input:
+        parts = [p.strip() for p in quick_input.split(",")]
+        mode_choice = parts[0] if len(parts) > 0 else "1"
+        media_choice = parts[1] if len(parts) > 1 else "2"
+        style_choice = parts[2] if len(parts) > 2 else "1"
+        density_choice = parts[3] if len(parts) > 3 else "2"
+
+        args.mode = {"1": "curated", "2": "strict", "3": "exam"}.get(mode_choice, "curated")
+        args.use_media = (media_choice == "1")
+        args.style = "hybrid" if style_choice == "2" else "qa"
+        args.density = "essential" if density_choice == "1" else "high"
+    else:
+        # Pergunta 1: Modo de Fidelidade
+        if not args.mode:
+            print("\n[1/4] Como deseja tratar o conteúdo do arquivo fonte?")
+            print("  [1] Curadoria & Recorrência (80/20: Seleciona o mais importante / reescreve enxuto)")
+            print("  [2] Fidelidade Estrita (Provas/Simulados/Normas: NÃO altera nada do texto fonte)")
+            print("  [3] Dissecação de Pegadinhas (Foco em erros de alternativas de provas)")
+            choice_mode = input("👉 Escolha [1/2/3] (Padrão: 1): ").strip()
+            args.mode = {"1": "curated", "2": "strict", "3": "exam"}.get(choice_mode, "curated")
+
+        # Pergunta 2: Imagens / Anexos
+        if not args.media and not args.no_media:
+            print("\n[2/4] O arquivo (.pdf, .md, .docx) possui imagens/diagramas que devem ir para o Anki?")
+            print("  [1] Sim — Rodar extratores de imagem e embutir mídias no baralho")
+            print("  [2] Não — Somente Texto (Desativa motor de imagens para máxima velocidade)")
+            choice_media = input("👉 Escolha [1/2] (Padrão: 2 - Somente Texto): ").strip()
+            args.use_media = (choice_media == "1")
+        else:
+            args.use_media = True if args.media else False
+
+        # Pergunta 3: Estilo de Card
+        if not args.style:
+            print("\n[3/4] Qual formato de flashcard prefere?")
+            print("  [1] Pergunta & Resposta Clássica + Justificativa Técnica")
+            print("  [2] Híbrido (Pergunta/Resposta + Lacunas Cloze para comandos e listas)")
+            choice_style = input("👉 Escolha [1/2] (Padrão: 1): ").strip()
+            args.style = "hybrid" if choice_style == "2" else "qa"
+
+        # Pergunta 4: Densidade
+        if not args.density:
+            print("\n[4/4] Qual nível de profundidade/quantidade de cartões deseja?")
+            print("  [1] Essencial (Enxuto, apenas conceitos principais)")
+            print("  [2] Exaustivo (Cobertura completa de todos os detalhes e questões)")
+            choice_density = input("👉 Escolha [1/2] (Padrão: 2): ").strip()
+            args.density = "essential" if choice_density == "1" else "high"
+
+    print("\n" + "-" * 68)
+    print(
+        f"✅ Configuração Aplicada: Modo={args.mode.upper()} | "
+        f"Imagens={'ATIVADO' if args.use_media else 'DESATIVADO (Turbo)'} | "
+        f"Estilo={args.style.upper()} | Densidade={args.density.upper()}"
+    )
+    print("-" * 68 + "\n")
+    return args
+
+# ---------------------------------------------------------------------------
+# 7. CHUNKING COM JANELA DESLIZANTE (OVERLAP)
+# ---------------------------------------------------------------------------
 def chunk_with_overlap(pages: list[str], max_chars_per_chunk: int = 8000, overlap_ratio: float = 0.15) -> list[str]:
-    """
-    Agrupa páginas/blocos de texto em lotes dinâmicos com sobreposição de 15%.
-    Impede que uma questão no final da página 10 seja separada do seu gabarito/diagrama no início da página 11.
-    """
     chunks = []
     current_chunk = []
     current_len = 0
@@ -614,10 +650,7 @@ def chunk_with_overlap(pages: list[str], max_chars_per_chunk: int = 8000, overla
     for page in pages:
         page_len = len(page)
         if current_len + page_len > max_chars_per_chunk and current_chunk:
-            chunk_text = "\n".join(current_chunk)
-            chunks.append(chunk_text)
-
-            # Calcula sobreposição: preserva os últimos blocos que representem ~15% dos caracteres
+            chunks.append("\n".join(current_chunk))
             overlap_target = int(max_chars_per_chunk * overlap_ratio)
             overlap_accum = 0
             overlap_blocks = []
@@ -626,7 +659,6 @@ def chunk_with_overlap(pages: list[str], max_chars_per_chunk: int = 8000, overla
                 overlap_blocks.insert(0, blk)
                 if overlap_accum >= overlap_target:
                     break
-
             current_chunk = overlap_blocks + [page]
             current_len = sum(len(b) for b in current_chunk)
         else:
@@ -638,23 +670,10 @@ def chunk_with_overlap(pages: list[str], max_chars_per_chunk: int = 8000, overla
 
     return chunks
 
-# ════════════════════════════════════════════
-# 5. MODELO PYDANTIC E REPARO DE RESPOSTA
-# ════════════════════════════════════════════
-
-if PYDANTIC_AVAILABLE:
-    class CardItem(BaseModel):
-        id_conceito: str = Field(default="")
-        pergunta: str
-        resposta: str
-        tags: list[str] = Field(default_factory=list)
-        suggested_deck: str = Field(default="")
-
+# ---------------------------------------------------------------------------
+# 8. PARSER E VALIDAÇÃO DE RESPOSTAS JSON
+# ---------------------------------------------------------------------------
 def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
-    """
-    Limpa e valida a resposta da IA utilizando json_repair e Pydantic.
-    Retorna a lista de cartões normalizados e a sugestão de nome de deck se houver.
-    """
     if not raw_response or not raw_response.strip():
         return [], ""
 
@@ -662,7 +681,6 @@ def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
     text = re.sub(r"^```(?:json)?\s*\n?", "", text)
     text = re.sub(r"\n?```\s*$", "", text).strip()
 
-    # Reparo automático de JSON com aspas soltas ou truncado
     if json_repair:
         try:
             parsed = json_repair.repair_json(text, return_objects=True)
@@ -699,7 +717,6 @@ def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
         if not p or not r:
             continue
 
-        # Normalização com Pydantic se disponível
         cid = item.get("id_conceito", "").strip()
         tags = item.get("tags", [])
         if not isinstance(tags, list):
@@ -720,37 +737,25 @@ def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
     return valid_cards, suggested_deck
 
 def reconcile_card_images(cards: list[dict], available_media: list[str]) -> None:
-    """
-    Auditor e auto-corretor de tags <img>:
-    Corrige alucinações de caminhos ou extensões da IA usando fuzzy matching com os arquivos em anki_media/.
-    """
     if not available_media:
         return
-
     basenames = [os.path.basename(m) for m in available_media]
     for card in cards:
         for field in ["pergunta", "resposta"]:
             text = card[field]
-            # Encontra tags <img src="...">
             for m in re.finditer(r'<img[^>]+src=["\'](.*?)["\']', text, re.IGNORECASE):
                 img_src = m.group(1).strip()
                 src_base = os.path.basename(img_src)
                 if src_base not in basenames:
-                    # Tenta encontrar por prefixo ou correspondência parcial
-                    clean_match = None
                     for b in basenames:
                         if b in src_base or src_base in b:
-                            clean_match = b
+                            card[field] = card[field].replace(img_src, b)
                             break
-                    if clean_match:
-                        card[field] = card[field].replace(img_src, clean_match)
 
-# ════════════════════════════════════════════
-# 6. GERAÇÃO NATIVA COM ANTIGRAVITY CLI (AGY)
-# ════════════════════════════════════════════
-
+# ---------------------------------------------------------------------------
+# 9. GERAÇÃO NATIVA COM ANTIGRAVITY CLI (AGY)
+# ---------------------------------------------------------------------------
 def call_antigravity_cli(prompt_text: str, model: str = DEFAULT_MODEL, effort: str = DEFAULT_EFFORT) -> str | None:
-    """Invoca o Antigravity CLI nativo (agy) diretamente no terminal, sem chaves externas de API."""
     cmd = [
         "agy",
         "--model", model,
@@ -777,7 +782,7 @@ def call_antigravity_cli(prompt_text: str, model: str = DEFAULT_MODEL, effort: s
         proc.kill()
         return None
     except FileNotFoundError:
-        log.error("[ERRO] Binário 'agy' não encontrado no PATH. Execute 'agy install' para configurar.")
+        log.error("[ERRO] Binário 'agy' não encontrado no PATH.")
         return None
     except Exception as e:
         log.warning(f"  ⚠ Erro inesperado ao invocar Antigravity CLI: {e}")
@@ -785,39 +790,19 @@ def call_antigravity_cli(prompt_text: str, model: str = DEFAULT_MODEL, effort: s
 
 def generate_flashcards_antigravity(
     chunks: list[str],
+    master_prompt: str,
     model: str = DEFAULT_MODEL,
-    effort: str = DEFAULT_EFFORT,
-    cache_path: str = ".anki_cache.jsonl",
-    resume: bool = False
+    effort: str = DEFAULT_EFFORT
 ) -> tuple[list[dict], str]:
-    """
-    Executa a geração através de lotes dinâmicos com cache de checkpointing (.anki_cache.jsonl).
-    Permite retomar de onde parou em caso de timeout.
-    """
     all_cards = []
     overall_suggested_deck = ""
-    start_chunk = 0
-
-    # Recupera cache existente se solicitado
-    if resume and os.path.exists(cache_path):
-        try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        data = json.loads(line)
-                        all_cards.extend(data.get("cards", []))
-                        if not overall_suggested_deck and data.get("suggested_deck"):
-                            overall_suggested_deck = data.get("suggested_deck")
-            log.info(f"  [Resume] {len(all_cards)} card(s) recuperado(s) do cache anterior.")
-        except Exception as e:
-            log.debug(f"Erro ao ler cache: {e}")
-
     total_chunks = len(chunks)
+
     log.info(f"\n  Iniciando processamento nativo via Antigravity ({model} - esforço: {effort})...")
 
     for idx, chunk in enumerate(chunks):
         log.info(f"  → Lote {idx + 1}/{total_chunks} (~{len(chunk):,} caracteres)...")
-        prompt = f"{SYSTEM_PROMPT}\n\nMATERIAL DE ESTUDO:\n{chunk}"
+        prompt = f"{master_prompt}\n\nMATERIAL DE ESTUDO:\n{chunk}"
 
         success = False
         for attempt in range(1, MAX_RETRIES + 1):
@@ -832,18 +817,10 @@ def generate_flashcards_antigravity(
                 if deck_sug and not overall_suggested_deck:
                     overall_suggested_deck = deck_sug
                 log.info(f"     ✓ {len(cards)} flashcard(s) gerado(s) com sucesso.")
-
-                # Grava no checkpoint cache
-                try:
-                    with open(cache_path, "a", encoding="utf-8") as f:
-                        f.write(json.dumps({"chunk": idx, "cards": cards, "suggested_deck": deck_sug}) + "\n")
-                except Exception:
-                    pass
-
                 success = True
                 break
             else:
-                log.warning(f"     ⚠ Resposta do lote {idx + 1} não continha cards válidos (tentativa {attempt}/{MAX_RETRIES})")
+                log.warning(f"     ⚠ Resposta do lote {idx + 1} sem cards válidos (tentativa {attempt}/{MAX_RETRIES})")
                 time.sleep(RETRY_DELAY_SECS)
 
         if not success:
@@ -851,22 +828,16 @@ def generate_flashcards_antigravity(
 
     return all_cards, overall_suggested_deck
 
-# ════════════════════════════════════════════
-# 7. MONTAGEM DO PACOTE ANKI (.apkg)
-# ════════════════════════════════════════════
-
+# ---------------------------------------------------------------------------
+# 10. MONTAGEM DO PACOTE ANKI (.apkg)
+# ---------------------------------------------------------------------------
 def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: str, output_path: str) -> None:
-    """
-    Monta o pacote .apkg com suporte real a cartões Básicos e Cloze,
-    IDs de deck determinísticos e GUIDs imunes a correções de digitação.
-    """
     if genanki is None:
         log.error("[ERRO] genanki não instalado. Execute: pip install genanki")
         sys.exit(1)
 
-    deck_id = get_deterministic_id(deck_name)
+    deck_id = get_deck_id(deck_name)
 
-    # 1. Modelo Básico Dark
     basic_model = genanki.Model(
         MODEL_BASIC_ID,
         "Flashcard Architect Native Basic",
@@ -879,7 +850,6 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
         css=ANKI_CSS
     )
 
-    # 2. Modelo Cloze Dark
     cloze_model = genanki.Model(
         MODEL_CLOZE_ID,
         "Flashcard Architect Native Cloze",
@@ -905,11 +875,9 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
         cid = card.get("id_conceito")
         tags = card.get("tags", ["antigravity-native"])
 
-        # GUID determinístico desacoplado do texto da pergunta
         guid_seed = f"{deck_name}_{cid}" if cid else f"{deck_name}_{p}"
         note_guid = genanki.guid_for(guid_seed)
 
-        # Detecta automaticamente se o cartão utiliza sintaxe Cloze ({{c1::...}})
         if "{{c" in p:
             note = genanki.Note(
                 model=cloze_model,
@@ -938,166 +906,32 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
     if valid_media:
         log.info(f"      → {len(valid_media)} imagem(ns) e diagrama(s) WebP embutido(s).")
 
-# ════════════════════════════════════════════
-# 8. INTEGRAÇÃO INVISÍVEL (ANKICONNECT & AUTO-OPEN)
-# ════════════════════════════════════════════
-
-def push_to_ankiconnect(cards: list[dict], media_files: list[str], deck_name: str) -> bool:
-    """Tenta injetar notas e mídias diretamente no AnkiDesktop via AnkiConnect (localhost:8765)."""
-    import urllib.request
-    anki_url = "http://127.0.0.1:8765"
-
-    def anki_invoke(action, **params):
-        payload = json.dumps({"action": action, "version": 6, "params": params}).encode("utf-8")
-        req = urllib.request.Request(anki_url, data=payload)
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            res = json.loads(resp.read().decode("utf-8"))
-            if res.get("error"):
-                raise RuntimeError(res["error"])
-            return res.get("result")
-
-    try:
-        anki_invoke("version")
-    except Exception:
-        # Tenta iniciar o Anki em segundo plano caso o executável exista no sistema
-        anki_exe = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Anki" / "anki.exe"
-        if anki_exe.exists():
-            log.info("  [AnkiConnect] Inicializando Anki Desktop em segundo plano...")
-            subprocess.Popen([str(anki_exe)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            time.sleep(3)
-            try:
-                anki_invoke("version")
-            except Exception:
-                return False
-        else:
-            return False
-
-    try:
-        # 1. Envia Mídias
-        for mpath in media_files:
-            if os.path.exists(mpath):
-                import base64
-                with open(mpath, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode("utf-8")
-                anki_invoke("storeMediaFile", filename=os.path.basename(mpath), data=b64)
-
-        # 2. Garante o Baralho
-        anki_invoke("createDeck", deck=deck_name)
-
-        # 3. Adiciona Notas
-        notes_payload = []
-        for c in cards:
-            is_cloze = "{{c" in c["pergunta"]
-            model_name = "Flashcard Architect Native Cloze" if is_cloze else "Flashcard Architect Native Basic"
-            fields = {"Text": c["pergunta"], "Extra": c["resposta"]} if is_cloze else {"Pergunta": c["pergunta"], "Resposta": c["resposta"]}
-            notes_payload.append({
-                "deckName": deck_name,
-                "modelName": model_name,
-                "fields": fields,
-                "tags": c.get("tags", ["antigravity-native"])
-            })
-
-        # Adiciona em lote
-        if notes_payload:
-            anki_invoke("addNotes", notes=notes_payload)
-            log.info(f"  [AnkiConnect] Injetados {len(notes_payload)} flashcards diretamente no Anki Desktop!")
-
-        # 4. Sincroniza com AnkiWeb
-        try:
-            anki_invoke("sync")
-            log.info("  [AnkiConnect] Sincronização disparada com AnkiWeb (disponível no celular/tablet)!")
-        except Exception:
-            pass
-
-        return True
-    except Exception as e:
-        log.warning(f"  ⚠ Falha ao injetar via AnkiConnect: {e}")
-        return False
-
-def auto_open_package(output_path: str) -> None:
-    """Abre o arquivo .apkg com o programa padrão do sistema (Anki) sem requerer comandos manuais."""
-    try:
-        if sys.platform.startswith("win"):
-            os.startfile(output_path)
-        elif sys.platform.startswith("darwin"):
-            subprocess.Popen(["open", output_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        else:
-            subprocess.Popen(["xdg-open", output_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        log.info(f"  [Auto-Open] Disparada abertura de '{output_path}' no Anki.")
-    except Exception as e:
-        log.debug(f"Aviso no auto-open: {e}")
-
-# ════════════════════════════════════════════
-# 9. MODO WATCHDOG (DROPZONE FOLDER)
-# ════════════════════════════════════════════
-
-def watch_directory(watch_dir: str, model: str, effort: str) -> None:
-    """Monitora uma pasta dropzone. Ao cair um arquivo suportado, processa e arquiva automaticamente."""
-    from watchdog.observers import Observer
-    from watchdog.events import FileSystemEventHandler
-
-    processed_dir = os.path.join(watch_dir, "Processados")
-    decks_dir = os.path.join(watch_dir, "Decks")
-    os.makedirs(processed_dir, exist_ok=True)
-    os.makedirs(decks_dir, exist_ok=True)
-
-    class DropzoneHandler(FileSystemEventHandler):
-        def on_created(self, event):
-            if event.is_directory:
-                return
-            ext = os.path.splitext(event.src_path)[1].lower()
-            if ext in [".pdf", ".md", ".docx", ".txt", ".json"]:
-                time.sleep(1)  # Aguarda gravação do arquivo concluir
-                log.info(f"\n[Dropzone] Novo arquivo detectado: {event.src_path}")
-                run_pipeline(event.src_path, model=model, effort=effort, output_dir=decks_dir)
-                try:
-                    dest = os.path.join(processed_dir, os.path.basename(event.src_path))
-                    shutil.move(event.src_path, dest)
-                    log.info(f"[Dropzone] Arquivo movido para: {dest}")
-                except Exception as e:
-                    log.debug(f"Erro ao mover arquivo processado: {e}")
-
-    observer = Observer()
-    observer.schedule(DropzoneHandler(), watch_dir, recursive=False)
-    observer.start()
-    log.info(f"╔══════════════════════════════════════════════════╗")
-    log.info(f"║  Flashcard Architect — Modo Watchdog Ativo       ║")
-    log.info(f"║  Monitorando pasta: {watch_dir:<29}║")
-    log.info(f"╚══════════════════════════════════════════════════╝")
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
-
-# ════════════════════════════════════════════
-# 10. PIPELINE PRINCIPAL E INFERÊNCIA ZERO-TOUCH
-# ════════════════════════════════════════════
-
+# ---------------------------------------------------------------------------
+# 11. PIPELINE PRINCIPAL E CLI
+# ---------------------------------------------------------------------------
 def run_pipeline(
     input_file: str,
-    deck: str | None = None,
-    output: str | None = None,
-    attachments: str | None = None,
-    model: str = DEFAULT_MODEL,
-    effort: str = DEFAULT_EFFORT,
-    chunk_size: int = 10,
-    no_ai: bool = False,
-    push: bool = True,
-    no_open: bool = False,
-    output_dir: str | None = None
+    deck: str | None,
+    output: str | None,
+    mode: str,
+    density: str,
+    style: str,
+    use_media: bool,
+    attachments: str | None,
+    model: str,
+    effort: str,
+    chunk_size: int,
+    no_ai: bool
 ) -> None:
-    """Executa o pipeline completo de forma autônoma (Zero-Touch)."""
     base_name = os.path.splitext(os.path.basename(input_file))[0]
 
     # 1. Extração
-    print(f"\n[1/3] Processando material e coletando anexos: {input_file}")
-    pages, media = extract_content(input_file, attachments)
+    print(f"\n[1/3] Processando material: {input_file} (Imagens={'Ativado' if use_media else 'Desativado/Turbo'})")
+    pages, media = extract_content(input_file, use_media=use_media, attach_dir=attachments)
     total_chars = sum(len(p) for p in pages)
-    print(f"      → {len(pages)} bloco(s) | {len(media)} anexo(s)/imagem(ns) | ~{total_chars:,} caracteres")
+    print(f"      → {len(pages)} bloco(s) | {len(media)} imagem(ns) | ~{total_chars:,} caracteres")
 
-    # 2. Obtenção dos flashcards
+    # 2. Geração de Flashcards
     cards = []
     suggested_deck = ""
     is_json = input_file.lower().endswith(".json") or no_ai
@@ -1107,9 +941,10 @@ def run_pipeline(
         raw_text = "\n".join(pages)
         cards, suggested_deck = parse_and_validate_cards(raw_text)
     else:
-        print(f"\n[2/3] Gerando flashcards com Antigravity CLI ({model} / {effort})...")
+        print(f"\n[2/3] Gerando flashcards com Antigravity CLI ({model} / {effort} / modo: {mode})...")
+        master_prompt = build_master_prompt(mode=mode, density=density, use_media=use_media, card_style=style)
         chunks = chunk_with_overlap(pages, max_chars_per_chunk=8000, overlap_ratio=0.15)
-        cards, suggested_deck = generate_flashcards_antigravity(chunks, model=model, effort=effort)
+        cards, suggested_deck = generate_flashcards_antigravity(chunks, master_prompt, model=model, effort=effort)
 
     if not cards:
         log.error("\n[ERRO] Nenhum flashcard foi gerado ou validado.")
@@ -1124,121 +959,58 @@ def run_pipeline(
             clean_title = re.sub(r"[_\-\.]+", " ", base_name).title()
             final_deck_name = f"Estudos::{clean_title}"
 
-    # Nome do arquivo .apkg de saída
     if not output:
         slug = re.sub(r"[^\w\s-]", "", final_deck_name.replace("::", "_")).strip().replace(" ", "_")
         output = f"{slug}.apkg"
-
-    if output_dir:
-        output = os.path.join(output_dir, os.path.basename(output))
 
     # 3. Empacotamento
     print(f"\n[3/3] Montando pacote Anki: '{final_deck_name}' -> {output}")
     build_anki_deck(cards, media, final_deck_name, output)
 
-    # 4. Injeção AnkiConnect ou Auto-Open
-    injected = False
-    if push:
-        injected = push_to_ankiconnect(cards, media, final_deck_name)
-
-    if not injected and not no_open:
-        auto_open_package(output)
-
-    print(f"\n{'='*52}")
-    print(f"  ✅ Concluído com sucesso (Zero-Touch)!")
+    print(f"\n{'='*56}")
+    print(f"  ✅ Baralho Anki gerado com sucesso!")
     print(f"  📦 Arquivo .apkg : {output}")
     print(f"  🃏 Total de cards: {len(cards)}")
     print(f"  🖼️  Mídias WebP  : {len(media)}")
     print(f"  📂 Baralho Anki  : {final_deck_name}")
-    print(f"{'='*52}\n")
+    print(f"  🎯 Modo de Estudo: {mode.upper()} | Estilo: {style.upper()}")
+    print(f"{'='*56}\n")
 
-# ════════════════════════════════════════════
-# CLI ARGPARSE
-# ════════════════════════════════════════════
+    # Prévia de 2 cartões para validação
+    print("👀 Prévia de Cartões Gerados:")
+    for i, c in enumerate(cards[:2], 1):
+        clean_p = re.sub(r"<[^>]+>", "", c["pergunta"])
+        clean_r = re.sub(r"<[^>]+>", "", c["resposta"])
+        print(f"  [{i}] Frente: {clean_p[:100]}...")
+        print(f"      Verso : {clean_r[:120]}...\n")
 
 def main():
     parser = argparse.ArgumentParser(
         prog="anki_generator",
-        description="Flashcard Architect — Pipeline Zero-Touch Nativo Antigravity de Decks Anki (.apkg)",
-        epilog="Zero flags necessárias: basta rodar 'python anki_generator.py' para auto-descobrir arquivos!"
+        description="Flashcard Architect — Pipeline com Wizard Interativo, Bypass de Mídia e Prompts Adaptativos.",
+        epilog="Exemplo: python anki_generator.py --input simulado.pdf --mode strict --no-media"
     )
-    parser.add_argument(
-        "--input", "-i",
-        default=None,
-        help="Arquivo de entrada (opcional se houver PDF/MD/DOCX no diretório)"
-    )
-    parser.add_argument(
-        "--deck", "-d",
-        default=None,
-        help="Nome do deck no Anki (se omitido, inferido automaticamente pela IA)"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        default=None,
-        help="Caminho do arquivo .apkg de saída (se omitido, baseado no nome do deck)"
-    )
-    parser.add_argument(
-        "--attachments", "-a",
-        default=None,
-        help="Diretório com imagens extras para incluir no deck"
-    )
-    parser.add_argument(
-        "--model", "-m",
-        default=DEFAULT_MODEL,
-        help=f"Modelo do Antigravity CLI (padrão: {DEFAULT_MODEL})"
-    )
-    parser.add_argument(
-        "--effort", "-e",
-        default=DEFAULT_EFFORT,
-        choices=["low", "medium", "high", "xhigh", "max"],
-        help=f"Nível de raciocínio no Antigravity CLI (padrão: {DEFAULT_EFFORT})"
-    )
-    parser.add_argument(
-        "--chunk-size", "-c",
-        type=int,
-        default=10,
-        help="Tamanho de referência dos lotes (padrão: 10)"
-    )
-    parser.add_argument(
-        "--no-ai", "--offline",
-        action="store_true",
-        help="Modo offline direto para JSON pré-estruturado"
-    )
-    parser.add_argument(
-        "--no-push",
-        action="store_true",
-        help="Não tenta conectar ao AnkiConnect local"
-    )
-    parser.add_argument(
-        "--no-open",
-        action="store_true",
-        help="Não abre o arquivo .apkg automaticamente no sistema"
-    )
-    parser.add_argument(
-        "--watch",
-        action="store_true",
-        help="Inicia modo Watchdog em pasta dropzone contínua"
-    )
-    parser.add_argument(
-        "--watch-dir",
-        default="./inbox",
-        help="Diretório monitorado pelo modo Watchdog (padrão: ./inbox)"
-    )
-    parser.add_argument(
-        "--version", "-v",
-        action="version",
-        version=f"Flashcard Architect v{VERSION} (Zero-Touch Antigravity)"
-    )
+    parser.add_argument("--input", "-i", default=None, help="Caminho do arquivo fonte (.pdf, .md, .docx, .txt, .json)")
+    parser.add_argument("--deck", "-d", default="Meu Baralho Antigravity", help="Nome do baralho no Anki (suporta ::)")
+    parser.add_argument("--output", "-o", default=None, help="Caminho do arquivo .apkg de saída")
+    parser.add_argument("--mode", "-M", choices=["curated", "strict", "exam"], default=None, help="Modo de fidelidade: curated (80/20), strict (literal) ou exam (erros)")
+    parser.add_argument("--media", action="store_true", default=None, help="Força ativação da extração de imagens")
+    parser.add_argument("--no-media", action="store_true", default=False, help="Força desativação da extração de imagens (Modo Turbo)")
+    parser.add_argument("--density", "-D", choices=["essential", "high"], default=None, help="Densidade dos cartões: essential ou high")
+    parser.add_argument("--style", choices=["qa", "hybrid"], default=None, help="Estilo dos cartões: qa ou hybrid (com Cloze)")
+    parser.add_argument("--attachments", "-a", default=None, help="Pasta de anexos extras de imagem")
+    parser.add_argument("--model", "-m", default=DEFAULT_MODEL, help=f"Modelo do Antigravity CLI (padrão: {DEFAULT_MODEL})")
+    parser.add_argument("--effort", "-e", default=DEFAULT_EFFORT, choices=["low", "medium", "high", "xhigh", "max"], help=f"Nível de esforço (padrão: {DEFAULT_EFFORT})")
+    parser.add_argument("--chunk-size", "-c", type=int, default=10, help="Páginas/seções por lote (padrão: 10)")
+    parser.add_argument("--non-interactive", "-y", action="store_true", help="Pula o Wizard interativo usando padrões/flags")
+    parser.add_argument("--no-ai", "--offline", action="store_true", help="Empacota diretamente um arquivo .json sem chamar IA")
+    parser.add_argument("--version", "-v", action="version", version=f"Flashcard Architect v{VERSION}")
+
     args = parser.parse_args()
 
-    if args.watch:
-        os.makedirs(args.watch_dir, exist_ok=True)
-        watch_directory(args.watch_dir, args.model, args.effort)
-        return
-
+    # Auto-descoberta de arquivo se --input for omitido
     target_file = args.input
     if not target_file:
-        # Auto-descoberta de arquivos não processados na pasta atual
         candidates = []
         for ext in ["*.pdf", "*.md", "*.docx", "*.txt", "*.json"]:
             for f in glob.glob(ext):
@@ -1246,27 +1018,27 @@ def main():
                     candidates.append(f)
         if candidates:
             target_file = candidates[0]
-            log.info(f"[Zero-Touch] Arquivo auto-descoberto: {target_file}")
+            log.info(f"[Auto-Descoberta] Arquivo selecionado: {target_file}")
         else:
-            log.error("[ERRO] Nenhum arquivo especificado e nenhum documento (.pdf, .md, .docx, .txt, .json) encontrado na pasta atual.")
+            log.error("[ERRO] Nenhum arquivo especificado e nenhum documento encontrado na pasta atual.")
             sys.exit(1)
 
-    print(f"+--------------------------------------------------+")
-    print(f"|  Flashcard Architect v{VERSION} — Zero-Touch Native |")
-    print(f"|  Modelo: {args.model:<24} Esforco: {args.effort:<6} |")
-    print(f"+--------------------------------------------------+")
+    # Executa Wizard Interativo caso necessário
+    args = run_interactive_wizard(args)
 
     run_pipeline(
         input_file=target_file,
         deck=args.deck,
         output=args.output,
+        mode=args.mode,
+        density=args.density,
+        style=args.style,
+        use_media=args.use_media,
         attachments=args.attachments,
         model=args.model,
         effort=args.effort,
         chunk_size=args.chunk_size,
-        no_ai=args.no_ai,
-        push=not args.no_push,
-        no_open=args.no_open
+        no_ai=args.no_ai
     )
 
 if __name__ == "__main__":

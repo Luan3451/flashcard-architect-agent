@@ -1,45 +1,56 @@
 ---
 name: flashcard-architect
-description: Analisa documentos de estudo (PDF, DOCX, TXT, Markdown) e gera flashcards de alta retenção para o Anki (.apkg), com imagens WebP embutidas, protocolo Zero-Touch, formatação HTML/CSS dark mode e saída JSON estruturada. 100% nativo no Antigravity CLI/IDE/APP com Gemini 3.8 Flash (High), sem APIs externas.
+description: Especialista em engenharia cognitiva FSRS e geração nativa de baralhos Anki (.apkg) via Antigravity com triagem rápida e bypass condicional de mídias.
+version: 3.1.0
+model: gemini-3.8-flash-high
 ---
 
-# Flashcard Architect — Skill
+# 🧠 Flashcard Architect — Skill
 
 ## Overview
 
-O **Flashcard Architect** é uma skill oficial para o Google Antigravity que transforma materiais de estudo em baralhos completos `.apkg` para o Anki com **automação Zero-Touch**.
+O **Flashcard Architect** é uma skill oficial para o Google Antigravity que transforma materiais de estudo (**PDF, Markdown, DOCX, TXT e JSON**) em baralhos Anki (`.apkg`) otimizados para o algoritmo FSRS com **Questionário de Triagem Pré-Voo** e **Lazy Media Extraction**.
 
-- **100% Nativo no Antigravity**: Sem APIs externas como o Google AI Studio.
-- **Protocolo Zero-Touch**: Execução autônoma imediata, inferência de decks hierárquicos e auto-recuperação de erros.
-- **Content-Addressed Storage WebP**: Imagens nomeadas por hash SHA-256 e compactadas em WebP, eliminando colisões globais na pasta `collection.media` do Anki.
-- **Suporte Dual (Básico e Cloze)**: Detecção automática de omissões `{{c1::...}}` com modelos dedicados.
-- **Integração AnkiConnect**: Injeção direta no AnkiDesktop e sincronização instantânea com o celular.
+- **100% Nativo no Antigravity**: Opera diretamente com Gemini 3.8 Flash (High Reasoning Effort) sem chaves externas de API.
+- **Wizard Interativo**: 4 perguntas rápidas para configurar fidelidade (curadoria vs. literalidade), processamento de mídias, formato de cartões e densidade.
+- **Bypass Condicional de Mídia**: Desativa ferramentas de imagem (`--no-media`) para extração turbo de textos puros.
+- **Deck IDs Determinísticos**: Hash de 31 bits prevenindo fusão acidental de decks no SQLite do Anki.
 
-## ⚡ Protocolo Zero-Touch
+## 📋 Fluxo de Execução
 
-1. NUNCA peça confirmação intermediária ao usuário antes de extrair textos ou rodar o script.
-2. Se o usuário não informar parâmetros opcionais (`--deck`, `--output`), infira automaticamente a taxonomia hierárquica.
-3. Entregue diretamente o resultado concluído com o arquivo `.apkg` pronto.
+### Etapa 1: Triagem Pré-Voo (Menu Rápido de 4 Opções)
 
-## Como Executar
+Quando acionado sem parâmetros explícitos, o assistente apresenta:
 
-### Via Antigravity CLI (Zero Flags)
+1. **Fidelidade ao Texto-Fonte:**
+   - `[1]` Curadoria & Recorrência (80/20)
+   - `[2]` Fidelidade Estrita (Provas / Simulados / Letra da Norma)
+   - `[3]` Auditoria de Erros e Pegadinhas
+2. **Imagens e Anexos:**
+   - `[1]` Sim (Ativar extratores de mídia `--media`)
+   - `[2]` Não (Modo Turbo Somente Texto `--no-media`)
+3. **Estilo dos Cartões:**
+   - `[1]` Pergunta & Resposta Clássica + Justificativa
+   - `[2]` Híbrido (com Lacunas Cloze)
+4. **Densidade:**
+   - `[1]` Essencial (Enxuto)
+   - `[2]` Exaustivo (Alto Rendimento)
 
-Basta executar o script no diretório contendo o arquivo de estudo:
+*(Resposta rápida aceita em uma única linha, ex: `1, 2, 1, 2` ou `padrão`).*
+
+### Etapa 2: Execução do Gerador
 
 ```bash
-# Auto-descobre o arquivo, processa com Gemini 3.8 Flash High e injeta no Anki
-python scripts/anki_generator.py
-
-# Ou especificando arquivo e pasta de anexos
-python scripts/anki_generator.py --input "resumo.md" --attachments "./anexos"
-
-# Modo Dropzone contínuo (Watchdog)
-python scripts/anki_generator.py --watch --watch-dir "./inbox"
+python scripts/anki_generator.py \
+  --input "<arquivo>" \
+  --deck "<nome_deck>" \
+  --mode <curated|strict|exam> \
+  --density <essential|high> \
+  [--media | --no-media] \
+  --non-interactive \
+  --output "<arquivo>.apkg"
 ```
 
-### No Antigravity IDE ou APP
+### Etapa 3: Entrega do Pacote
 
-1. Mencione `@flashcard-architect` no chat.
-2. Forneça o arquivo (PDF, Markdown ou apostila).
-3. O agente executa o pipeline de ponta a ponta sem perguntas intermediárias e entrega o baralho pronto.
+Exibe o caminho do `.apkg`, total de cartões criados e prévia visual de validação.
