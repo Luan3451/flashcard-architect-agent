@@ -1,14 +1,21 @@
-# 🧠 Flashcard Architect Agent (`v3.1.0` — Antigravity Native Edition)
+# 🧠 Flashcard Architect Agent (`v3.2.0` — Antigravity Native Edition)
 
-> **Agente Especialista, Skill e Motor Python para Geração de Baralhos Anki (`.apkg`) Otimizados para o Algoritmo FSRS com Triagem Inteligente e Zero Dependência de APIs Externas.**
+> **Agente Especialista, Skill e Motor Python para Geração Autônoma de Baralhos Anki (`.apkg`) Otimizados para o Algoritmo FSRS com Ancoragem Geométrica de Diagramas, Auditoria de Simulados e Zero Dependência de APIs Externas.**
 
 ---
 
 ## 📌 Visão Geral
 
-O **Flashcard Architect Agent** automatiza a transformação de materiais de estudo (**PDF, Markdown, DOCX, TXT e JSON**) em pacotes `.apkg` prontos para importação no Anki Desktop, AnkiWeb e AnkiDroid/AnkiMobile. 
+O **Flashcard Architect Agent v3.2.0** automatiza a transformação de materiais de estudo (**PDF, Markdown, DOCX, TXT e JSON**) em pacotes `.apkg` prontos para importação no Anki Desktop, AnkiWeb e AnkiDroid/AnkiMobile. 
 
-Operando **100% nativamente no ecossistema Google Antigravity** (`agy` CLI, Antigravity IDE e Antigravity Desktop APP) com o modelo **Gemini 3.8 Flash (High Reasoning Effort)**, o projeto dispensa chaves pagas (`GEMINI_API_KEY`) e inclui um **Wizard Interativo Pré-Voo** que adapta a extração de imagens e a fidelidade textual ao seu objetivo (resumos teóricos, simulados literais ou revisão de erros).
+Operando **100% nativamente no ecossistema Google Antigravity** (`agy` CLI, Antigravity IDE e Antigravity Desktop APP) com o modelo **Gemini 3.8 Flash (High Reasoning Effort)**, o projeto dispensa chaves pagas (`GEMINI_API_KEY`) e inclui inovações arquiteturais desenvolvidas para cenários reais de alta densidade (como simulados de certificações de TI, OAB e concursos):
+
+1. **Ancoragem Geométrica de Diagramas (Y0)**: Lê a coordenada vertical (`bbox.y0`) de cada imagem e bloco de texto via PyMuPDF, posicionando o diagrama diretamente abaixo da questão correta (sem acúmulo no rodapé).
+2. **Indexação Sequencial Global & Prefixo de Bateria**: Previne colisões de contexto em simulados com seções reiniciadas (Q1–Q18, Q1–Q24) atribuindo o identificador `[Pág. X | QY (Global #Z)]`.
+3. **Filtro de Simulado e Auto-Tagging de Status**: Identifica automaticamente questões incorretas (`status::wrong`) e corretas (`status::correct`), permitindo gerar cartões apenas dos seus erros via `--filter wrong`.
+4. **Relatório Analítico de Auditoria**: Gera automaticamente o arquivo `<output>_Relatorio_Auditoria.md` com métricas consolidadas de acertos, erros e diagramas mapeados.
+5. **Preservação de Idioma Bilíngue (`--lang keep`)**: Mantém 100% das questões, alternativas e saídas de console no idioma oficial do exame (ex: Inglês da Cisco/AWS) enquanto entrega explicações detalhadas em Português no verso.
+6. **Wizard Interativo de 5 Eixos**: Triagem rápida pré-voo respondida com Enter (padrões) ou em linha única (`1, 1, 1, 1, 1`).
 
 ---
 
@@ -16,17 +23,17 @@ Operando **100% nativamente no ecossistema Google Antigravity** (`agy` CLI, Anti
 
 ```text
 flashcard-architect-agent/
-├── .gitignore                        # Proteção contra vazamento de mídias e .apkg locais
-├── README.md                         # Documentação mestre e passo a passo completo
-├── plugin.json                       # Manifesto oficial do Plugin Antigravity
-├── prompt_agente.txt                 # Matriz de Prompts Mestres (Curadoria, Literal e Simulados)
+├── .gitignore                        # Proteção contra mídias e .apkg temporários
+├── README.md                         # Documentação oficial e passo a passo
+├── plugin.json                       # Manifesto v3.2.0 com permissões filesystem e shell
+├── prompt_agente.txt                 # Matriz de Prompts Mestres (Curadoria, Literal e Erros)
 ├── agents/
-│   └── flashcard-architect.md        # Definição do Agente (@flashcard-architect) com Wizard
+│   └── flashcard-architect.md        # Agente @flashcard-architect com triagem de 5 eixos
 ├── skills/
 │   └── flashcard-architect/
-│       └── SKILL.md                  # Skill autônoma acionável pelo Antigravity
+│       └── SKILL.md                  # Skill autônoma para Antigravity IDE e CLI
 └── scripts/
-    └── anki_generator.py             # Motor Python (Extração, CLI Interativa, IA e GenAnki)
+    └── anki_generator.py             # Motor Python v3.2.0 (Extração Y0, Auditoria, IA e GenAnki)
 ```
 
 ---
@@ -39,7 +46,6 @@ flashcard-architect-agent/
    ```bash
    agy --version
    ```
-   *(Caso o comando `agy` não seja reconhecido no terminal, execute `agy install` no Antigravity IDE ou adicione o diretório binário do Antigravity ao `PATH` do seu sistema).*
 
 ### Passo 2: Clonar o Repositório
 ```bash
@@ -47,123 +53,98 @@ git clone https://github.com/Luan3451/flashcard-architect-agent.git
 cd flashcard-architect-agent
 ```
 
-### Passo 3: Instalar o Plugin/Agente no Antigravity (Opcional para uso via IDE/APP)
-Para disponibilizar o comando `@flashcard-architect` e a skill globalmente no seu Antigravity IDE/APP:
+### Passo 3: Instalar o Plugin no Antigravity
+Para disponibilizar o agente `@flashcard-architect` e a skill globalmente no seu Antigravity IDE/APP:
 ```bash
 agy plugin install .
 ```
 
-### Passo 4: Instalação de Dependências Python (Automática ou Manual)
-O script `scripts/anki_generator.py` possui **Auto-Bootstrap**: na primeira execução, ele detecta e instala automaticamente pacotes ausentes. Caso prefira instalar manualmente antes de rodar:
+### Passo 4: Instalação de Dependências Python
+O script `scripts/anki_generator.py` possui **Auto-Bootstrap**: na primeira execução, ele instala automaticamente as bibliotecas ausentes. Caso prefira provisionar manualmente:
 ```bash
 pip install genanki pymupdf python-docx Pillow
 ```
 
 ---
 
-## 🧭 Como Funciona o Fluxo de Triagem (Wizard Interativo)
+## ⚡ Guia Rápido de Uso
 
-Ao iniciar o agente no chat (`@flashcard-architect`) ou rodar o script sem flags de bloqueio, o sistema realiza **4 perguntas rápidas** para provisionar o baralho na medida exata da sua necessidade:
-
-1. **Modo de Fidelidade da Fonte:**
-   - **Opção 1 (Curadoria & Recorrência):** Filtra o que é mais importante e reescreve em cartões enxutos.
-   - **Opção 2 (Fidelidade Estrita / Literal):** Ideal para **provas, simulados e legislação** — mantém o texto-fonte intacto sem omitir detalhes.
-   - **Opção 3 (Dissecação de Simulado):** Cria cartões focados nas alternativas erradas e pegadinhas da prova.
-2. **Extração de Imagens e Anexos:**
-   - Pergunta se o seu `.pdf`, `.md` ou `.docx` possui imagens/diagramas que devem ir para o Anki. Se você escolher **Não**, o motor de imagem (`PyMuPDF` / `Pillow`) nem é carregado, acelerando drasticamente o processamento.
-3. **Estilo de Cartão:** Pergunta/Resposta clássica com Justificativa ou Híbrido com Cloze (`{{c1::...}}`).
-4. **Densidade de Cartões:** Essencial (resumo rápido) ou Exaustiva (cobertura total do documento).
-
----
-
-## 🛠️ Manual Passo a Passo de Execução
-
-### Modo A: Pelo Antigravity IDE ou Desktop APP (Interface Visual)
-
-1. Abra o seu projeto no **Antigravity IDE** ou **Antigravity Desktop APP**.
-2. No painel de chat, chame o agente digitando:
-   ```text
-   @flashcard-architect Quero gerar um baralho a partir do arquivo provas/simulado_seguranca.pdf
-   ```
-3. O agente apresentará o **Menu Rápido de 4 Opções**. Responda apenas com os números (ex: `2, 1, 1, 2` para *Texto Literal de Prova + Com Imagens + Pergunta/Resposta + Cobertura Exaustiva*).
-4. O agente executará o `anki_generator.py` em segundo plano e entregará o arquivo `.apkg` pronto na pasta de trabalho.
-
----
-
-### Modo B: Pelo Terminal / Linha de Comando (Interativo ou Automatizado)
-
-#### 1. Execução Guiada (Wizard no Terminal)
-Basta informar o arquivo de entrada. O próprio terminal fará as perguntas de configuração:
+### Opção A: Execução Interativa (Wizard 5-Eixos)
+Basta executar o script apontando para o seu material. O sistema apresenta o menu de 5 perguntas:
 ```bash
-python scripts/anki_generator.py --input "materiais/apostila_redes.pdf"
+python scripts/anki_generator.py --input simulado_ccna.pdf
 ```
+*(Você pode pressionar Enter para aceitar todas as recomendações ou digitar `1, 1, 2, 1, 1` para focar somente em erros de simulado).*
 
-#### 2. Execução Direta para Provas/Simulados (Sem alterar texto-fonte + Com Imagens)
-Para pular o questionário e rodar tudo em um único comando automatizado:
+### Opção B: Execução Zero-Touch (Automatizada por Linha de Comando)
+
+#### 1. Simulado de TI com Foco Cirúrgico nos Erros (Inglês + Justificativa PT)
 ```bash
 python scripts/anki_generator.py \
-  --input "provas/simulado_redes.pdf" \
-  --deck "Simulados::Redes e Segurança" \
+  --input ccna_erros.pdf \
+  --deck "Certificacoes::Cisco::CCNA_200_301" \
   --mode strict \
+  --filter wrong \
+  --lang keep \
   --media \
-  --density high \
-  --output simulado_redes.apkg
+  --non-interactive
 ```
 
-#### 3. Execução Rápida Somente Texto (Ignorando ferramentas de imagem)
-Ideal para PDFs ou Markdowns puramente teóricos onde você quer velocidade máxima:
+#### 2. Resumo de Apostila Teórica (Modo Turbo Sem Imagens)
 ```bash
 python scripts/anki_generator.py \
-  --input "resumos/anotacoes_cloud.md" \
-  --deck "Cloud::Conceitos Mais Cobrados" \
+  --input apostila_redes.pdf \
+  --deck "Redes::Fundamentos" \
   --mode curated \
   --no-media \
-  --output cloud_resumo.apkg
+  --density high \
+  --non-interactive
 ```
 
-#### 4. Empacotamento Offline de JSON Pré-formatado (Sem uso de IA)
+#### 3. Prova da OAB / Concurso Jurídico (Fidelidade Literal ao Texto)
 ```bash
 python scripts/anki_generator.py \
-  --input "meus_cards.json" \
-  --no-ai \
-  --deck "Revisão Offline" \
-  --output revisao.apkg
+  --input prova_oab.pdf \
+  --deck "Direito::OAB_1a_Fase" \
+  --mode strict \
+  --lang pt \
+  --non-interactive
 ```
 
 ---
 
-## ⚙️ Tabela Completa de Parâmetros CLI (`anki_generator.py`)
+## 📊 Relatório de Auditoria Gerado
 
-| Argumento | Flag Curta | Padrão | Descrição |
-| :--- | :---: | :---: | :--- |
-| `--input` | `-i` | *(Obrigatório)* | Caminho do arquivo fonte (`.pdf`, `.md`, `.docx`, `.txt`, `.json`) |
-| `--deck` | `-d` | `"Meu Baralho Antigravity"` | Nome do baralho no Anki (suporta sub-decks com `::`) |
-| `--output` | `-o` | `"flashcards.apkg"` | Caminho do pacote `.apkg` gerado |
-| `--mode` | `-M` | *(Pergunta no Wizard)* | `curated` (recorrência/80-20), `strict` (fiel à fonte/provas) ou `exam` (foco em erros) |
-| `--media` / `--no-media` | - | *(Pergunta no Wizard)* | Ativa (`--media`) ou desativa (`--no-media`) os extratores de imagem do PDF/MD/DOCX |
-| `--density` | `-D` | `normal` | Granularidade dos cartões: `essential` (enxuto) ou `high` (exaustivo) |
-| `--style` | - | `qa` | Estilo dos cartões: `qa` (Pergunta/Resposta) ou `hybrid` (com Cloze) |
-| `--attachments` | `-a` | `None` | Pasta complementar de imagens e mídias externas |
-| `--model` | `-m` | `gemini-3.8-flash-high` | Modelo acionado via Antigravity CLI (`agy`) |
-| `--effort` | `-e` | `high` | Nível de esforço cognitivo (`low`, `medium`, `high`, `max`) |
-| `--chunk-size` | `-c` | `10` | Quantidade de páginas/seções enviadas por lote à IA |
-| `--non-interactive`| `-y` | `False` | Pula o questionário interativo usando os valores das flags ou padrões |
-| `--no-ai` | `--offline` | `False` | Empacota diretamente um arquivo `.json` sem chamar a IA |
+Ao final de cada execução com simulados, o gerador grava automaticamente um relatório no formato Markdown (`<output>_Relatorio_Auditoria.md`) contendo:
+- Total de páginas e questões detectadas
+- Contagem e percentual de questões com tag `status::wrong` vs `status::correct`
+- Diagramas e topologias ancoradas geometricamente por coordenada Y
+- Prévia de cartões e instruções de criação de Baralhos Filtrados no Anki com FSRS
 
 ---
 
-## 📥 Passo Final: Importação no Anki
+## 🛠️ Opções Completas de Linha de Comando (`--help`)
 
-1. Abra o **Anki Desktop** (ou envie o arquivo para o **AnkiDroid / AnkiMobile**).
-2. Pressione `Ctrl + I` (**Arquivo → Importar**).
-3. Selecione o arquivo `.apkg` gerado.
-4. Todos os cartões serão adicionados ao baralho especificado com **Dark Mode nativo**, **imagens vinculadas** e **GUIDs determinísticos** (atualizações futuras do mesmo baralho preservam seu histórico FSRS).
+| Flag | Argumentos | Padrão | Descrição |
+| :--- | :--- | :--- | :--- |
+| `-i, --input` | Caminho do arquivo | Auto-detect | Arquivo `.pdf`, `.md`, `.docx`, `.txt`, `.json` |
+| `-d, --deck` | String | Estudos::... | Nome hierárquico do baralho no Anki (`::`) |
+| `-o, --output` | Caminho `.apkg` | `<deck>.apkg` | Caminho do pacote Anki exportado |
+| `-M, --mode` | `curated`, `strict`, `exam` | `curated` | Curadoria (80/20), Literal ou Foco em Pegadinhas |
+| `--media` | Flag booleana | Ativo | Ativa extração e ancoragem de imagens |
+| `--no-media` | Flag booleana | Inativo | Desativa motor de imagens (Modo Turbo) |
+| `-F, --filter` | `all`, `wrong`, `correct` | `all` | Filtro de simulado (todas, apenas erros ou acertos) |
+| `-L, --lang` | `keep`, `pt`, `en` | `keep` | Preservação bilíngue (`keep`), português ou inglês |
+| `-D, --density` | `essential`, `high` | `high` | Quantidade de cartões (1-2 vs 3-6 por página) |
+| `-S, --style` | `qa`, `hybrid` | `qa` | Formato Pergunta/Resposta clássico ou Híbrido com Cloze |
+| `-m, --model` | Nome do modelo | `gemini-3.8-flash-high` | Modelo do Antigravity CLI |
+| `-e, --effort` | `low`, `medium`, `high`, `xhigh` | `high` | Nível de esforço de raciocínio da inferência |
+| `-y, --non-interactive` | Flag booleana | Inativo | Pula o wizard usando flags/padrões |
+| `--no-report` | Flag booleana | Inativo | Não gera o arquivo `.md` de auditoria |
+| `-v, --version` | N/A | N/A | Exibe a versão do Flashcard Architect |
 
 ---
 
-## 🛠️ Resolução de Problemas (Troubleshooting)
+## 📄 Licença
 
-* **`UnicodeEncodeError` no Windows:** O script força `sys.stdout` e `sys.stderr` para `UTF-8` automaticamente na inicialização.
-* **`Command 'agy' not found`:** Certifique-se de que o Antigravity CLI está instalado e acessível no terminal com `agy --version`.
-* **PDF muito denso dando timeout no lote:** Reduza a quantidade de páginas por lote adicionando `--chunk-size 5`.
-* **Imagens de cabeçalho indesejadas em PDFs:** Caso o PDF contenha apenas texto relevante e logos repetitivos no topo da página, selecione a opção **Somente Texto (`--no-media`)** no questionário inicial.
+Distribuído sob licença MIT. Criado por **Luan3451**.

@@ -1,11 +1,34 @@
 {
   "name": "flashcard-architect",
-  "version": "3.1.0",
-  "description": "Transforma documentos de estudo em flashcards Anki de alta retenção com imagens WebP embutidas, protocolo Zero-Touch, formatação Dark Mode e saída .apkg. 100% nativo no Antigravity CLI/IDE/APP com Gemini 3.8 Flash (High), sem requerer APIs externas.",
-  "displayName": "Flashcard Architect (Zero-Touch)",
+  "version": "3.2.0",
+  "description": "Agente e Skill oficial para geração autônoma de baralhos Anki (.apkg) otimizados para FSRS com extração posicional de diagramas e auditoria de simulados.",
+  "author": "Luan3451",
+  "displayName": "Flashcard Architect (Zero-Touch v3.2.0)",
+  "agents": [
+    "agents/flashcard-architect.md"
+  ],
+  "skills": [
+    "skills/flashcard-architect/SKILL.md"
+  ],
   "suggestedPrompts": [
-    "Converta este PDF em flashcards Anki de alta retenção de forma autônoma com imagens e justificativas",
-    "Transforme minhas anotações em Markdown e colete os anexos em flashcards atômicos com formatação Dark Mode",
-    "Gere o .apkg a partir do meu documento com foco nos conceitos mais cobrados e mídias embutidas"
-  ]
+    "Converta este simulado PDF em flashcards Anki com ancoragem geométrica de topologias e auditoria de erros",
+    "Gere o .apkg a partir do meu documento com foco nos conceitos mais cobrados e mídias WebP embutidas",
+    "Extraia apenas as questões incorretas deste simulado em flashcards com justificativas técnicas no Anki"
+  ],
+  "permissions": {
+    "filesystem": {
+      "read": true,
+      "write": true
+    },
+    "shell": {
+      "execute": true,
+      "allowlist": [
+        "python",
+        "python3",
+        "uv",
+        "pip",
+        "agy"
+      ]
+    }
+  }
 }

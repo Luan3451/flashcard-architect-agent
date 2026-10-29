@@ -1,56 +1,53 @@
 ---
 name: flashcard-architect
-description: Especialista em engenharia cognitiva FSRS e geração nativa de baralhos Anki (.apkg) via Antigravity com triagem rápida e bypass condicional de mídias.
-version: 3.1.0
-model: gemini-3.8-flash-high
+description: Especialista em engenharia cognitiva FSRS e geração nativa de baralhos Anki (.apkg) via Antigravity com ancoragem posicional de diagramas, auditoria de simulados e triagem rápida de 5 eixos.
 ---
 
-# 🧠 Flashcard Architect — Skill
+# 🧠 Flashcard Architect — Skill (v3.2.0)
 
 ## Overview
 
-O **Flashcard Architect** é uma skill oficial para o Google Antigravity que transforma materiais de estudo (**PDF, Markdown, DOCX, TXT e JSON**) em baralhos Anki (`.apkg`) otimizados para o algoritmo FSRS com **Questionário de Triagem Pré-Voo** e **Lazy Media Extraction**.
+O **Flashcard Architect** é uma skill oficial para o Google Antigravity projetada para converter materiais de estudo (**PDF, Markdown, DOCX, TXT e JSON**) em baralhos Anki (`.apkg`) otimizados para o algoritmo FSRS com:
+- **Ancoragem Espacial Y0**: Vinculação precisa de topologias e diagramas na linha exata da questão correspondente.
+- **Indexação Sequencial Global**: Prefixo composto `[Pág. X | QY (Global #Z)]` prevenindo colisão em simulados com baterias particionadas.
+- **Filtro de Auditoria Wrong/Correct**: Marcação automática `status::wrong` e geração de relatório analítico `<output>_Relatorio_Auditoria.md`.
+- **Preservação Bilíngue (`--lang keep`)**: Preserva termos técnicos oficiais (Cisco, AWS, OAB) no idioma original enquanto gera explicações técnicas completas.
+- **100% Nativo no Antigravity**: Opera exclusivamente via `agy` (`gemini-3.8-flash-high`) com zero dependência de APIs externas (sem Google AI Studio).
 
-- **100% Nativo no Antigravity**: Opera diretamente com Gemini 3.8 Flash (High Reasoning Effort) sem chaves externas de API.
-- **Wizard Interativo**: 4 perguntas rápidas para configurar fidelidade (curadoria vs. literalidade), processamento de mídias, formato de cartões e densidade.
-- **Bypass Condicional de Mídia**: Desativa ferramentas de imagem (`--no-media`) para extração turbo de textos puros.
-- **Deck IDs Determinísticos**: Hash de 31 bits prevenindo fusão acidental de decks no SQLite do Anki.
+---
 
-## 📋 Fluxo de Execução
+## 📋 Protocolo de Execução
 
-### Etapa 1: Triagem Pré-Voo (Menu Rápido de 4 Opções)
+### Etapa 1: Triagem Pré-Voo de 5 Eixos
 
-Quando acionado sem parâmetros explícitos, o assistente apresenta:
+Quando acionado sem parâmetros explícitos no prompt, apresente o questionário rápido de 5 eixos:
+1. **Fidelidade:** `[1]` Curadoria 80/20 (Padrão) \| `[2]` Estrita Literal \| `[3]` Erros/Pegadinhas
+2. **Mídias:** `[1]` Sim (Ancoragem Y0 - Padrão) \| `[2]` Não (Modo Turbo Somente Texto)
+3. **Filtro:** `[1]` Todas as Questões (Padrão) \| `[2]` Somente Incorretas (`wrong`) \| `[3]` Somente Acertos (`correct`)
+4. **Idioma:** `[1]` Preservar Original / Bilíngue (`keep` - Padrão) \| `[2]` Português (`pt`) \| `[3]` Inglês (`en`)
+5. **Formato:** `[1]` P/R Clássico Exaustivo (Padrão) \| `[2]` Híbrido com Cloze \| `[3]` Essencial Enxuto
 
-1. **Fidelidade ao Texto-Fonte:**
-   - `[1]` Curadoria & Recorrência (80/20)
-   - `[2]` Fidelidade Estrita (Provas / Simulados / Letra da Norma)
-   - `[3]` Auditoria de Erros e Pegadinhas
-2. **Imagens e Anexos:**
-   - `[1]` Sim (Ativar extratores de mídia `--media`)
-   - `[2]` Não (Modo Turbo Somente Texto `--no-media`)
-3. **Estilo dos Cartões:**
-   - `[1]` Pergunta & Resposta Clássica + Justificativa
-   - `[2]` Híbrido (com Lacunas Cloze)
-4. **Densidade:**
-   - `[1]` Essencial (Enxuto)
-   - `[2]` Exaustivo (Alto Rendimento)
+---
 
-*(Resposta rápida aceita em uma única linha, ex: `1, 2, 1, 2` ou `padrão`).*
-
-### Etapa 2: Execução do Gerador
+### Etapa 2: Linha de Comando Operacional
 
 ```bash
 python scripts/anki_generator.py \
   --input "<arquivo>" \
-  --deck "<nome_deck>" \
+  --deck "<nome_do_baralho>" \
   --mode <curated|strict|exam> \
+  --filter <all|wrong|correct> \
+  --lang <keep|pt|en> \
   --density <essential|high> \
+  --style <qa|hybrid> \
   [--media | --no-media] \
   --non-interactive \
-  --output "<arquivo>.apkg"
+  --output "<arquivo_saida>.apkg"
 ```
 
-### Etapa 3: Entrega do Pacote
+---
 
-Exibe o caminho do `.apkg`, total de cartões criados e prévia visual de validação.
+## 📦 Entrega
+
+- Arquivo `.apkg` pronto para importação no Anki Desktop ou AnkiMobile.
+- Relatório de Auditoria `<output>_Relatorio_Auditoria.md` com métricas completas de erros e cobertura.
