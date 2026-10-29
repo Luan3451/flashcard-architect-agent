@@ -1,11 +1,11 @@
 {
   "name": "flashcard-architect",
-  "version": "2.0.0",
-  "description": "Transforma documentos de estudo (PDF, DOCX, TXT, Markdown) em flashcards Anki de alta retenção com imagens embutidas, formatação HTML/CSS dark mode e saída .apkg pronta para importar.",
+  "version": "3.0.0",
+  "description": "Transforma documentos de estudo (PDF, DOCX, TXT, Markdown) em flashcards Anki de alta retenção com imagens embutidas, formatação HTML/CSS dark mode e saída .apkg pronta. 100% nativo no Antigravity CLI/IDE/APP com Gemini 3.8 Flash (High), sem requerer APIs externas.",
   "displayName": "Flashcard Architect",
   "suggestedPrompts": [
     "Analise meu PDF de simulado e gere flashcards das questões que errei, com imagens e justificativas",
-    "Transforme minhas anotações em flashcards atômicos com formatação dark mode para o Anki",
-    "Gere o .apkg a partir do meu documento DOCX com foco nos conceitos mais cobrados"
+    "Transforme minhas anotações em Markdown e colete os anexos em flashcards atômicos com formatação dark mode para o Anki",
+    "Gere o .apkg a partir do meu documento DOCX/PDF com foco nos conceitos mais cobrados e mídias embutidas"
   ]
 }
