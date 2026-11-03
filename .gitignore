@@ -1,19 +1,28 @@
-# API Keys e configurações sensíveis
+# API Keys and sensitive credentials
 .env
 *.env
 config.local.py
 
-# Mídia gerada pelo script
+# Generated media
 anki_media/
 
-# Saídas geradas
+# Generated Anki packages
 *.apkg
 
-# Documentos de entrada (não versionar materiais pessoais)
+# Temporary extraction files & payloads
+*_extracted.txt
+*_payload.json
+
+# Input documents (do not commit personal study materials)
 *.pdf
 *.docx
 
-# Python
+# Archives and packages (allow distribution bundle)
+*.zip
+!flashcard-architect-agensi.zip
+*.tar.gz
+
+# Python artifacts
 __pycache__/
 *.py[cod]
 *.pyo
@@ -26,14 +35,14 @@ venv/
 env/
 .eggs/
 
-# IDEs
+# IDE and Editor settings
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Sistema
+# Operating System artifacts
 .DS_Store
 Thumbs.db
 Desktop.ini

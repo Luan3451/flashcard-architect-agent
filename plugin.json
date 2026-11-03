@@ -1,19 +1,20 @@
 {
   "name": "flashcard-architect",
   "version": "3.2.0",
-  "description": "Agente e Skill oficial para geração autônoma de baralhos Anki (.apkg) otimizados para FSRS com extração posicional de diagramas e auditoria de simulados.",
+  "description": "Automated Anki flashcard architect (.apkg) with Y0 geometric diagram anchoring, practice exam error auditing, FSRS optimization, and 5-axis customization for PDF, DOCX, Markdown, and TXT.",
   "author": "Luan3451",
-  "displayName": "Flashcard Architect (Zero-Touch v3.2.0)",
+  "displayName": "Flashcard Architect (Multi-Agent v3.2.0)",
   "agents": [
     "agents/flashcard-architect.md"
   ],
   "skills": [
+    "SKILL.md",
     "skills/flashcard-architect/SKILL.md"
   ],
   "suggestedPrompts": [
-    "Converta este simulado PDF em flashcards Anki com ancoragem geométrica de topologias e auditoria de erros",
-    "Gere o .apkg a partir do meu documento com foco nos conceitos mais cobrados e mídias WebP embutidas",
-    "Extraia apenas as questões incorretas deste simulado em flashcards com justificativas técnicas no Anki"
+    "Convert this PDF practice exam into Anki flashcards with geometric topology anchoring and error auditing",
+    "Generate an Anki .apkg from my document with high-yield focus, WebP diagrams, and FSRS optimization",
+    "Extract only the incorrect questions from this exam into flashcards with in-depth technical rationales"
   ],
   "permissions": {
     "filesystem": {
