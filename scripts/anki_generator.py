@@ -8,15 +8,18 @@
 #     "pillow>=10.0.0",
 #     "pydantic>=2.7.0",
 #     "json-repair>=0.25.0",
+#     "watchdog>=4.0.0",
 #     "rapidocr-onnxruntime>=1.2.0",
 # ]
 # ///
 # -*- coding: utf-8 -*-
 """
-anki_generator.py — v3.2.0 (Agensi.io Commercial & Multi-Agent Edition)
-Automated Anki Flashcard Engine with Y0 Spatial Diagram Anchoring,
-Practice Exam Audit Filtering, Universal Multi-Agent Support, and Native FSRS Optimization.
-Compatible with Claude Code, Cursor, Copilot, Windsurf, and Google Antigravity.
+anki_generator.py — v3.2.0 (Antigravity Native Edition)
+Pipeline completo com Ancoragem Espacial de Imagens (Y-coord), Indexação de Baterias,
+Filtro Wrong/Correct de Simulados, Relatório de Auditoria e Wizard 5-Eixos.
+Zero dependência de APIs externas (sem Google AI Studio / sem GEMINI_API_KEY).
+Utiliza exclusivamente o ecossistema Antigravity (Antigravity CLI / IDE / APP)
+com o modelo Gemini 3.8 Flash (High reasoning effort).
 """
 
 import argparse
@@ -36,10 +39,10 @@ import sys
 import time
 import warnings
 
-# Suppress PyMuPDF migration warnings
+# Suprime avisos de migração do PyMuPDF
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Force UTF-8 encoding on Windows to prevent charmap encoding errors
+# Força UTF-8 no Windows para evitar UnicodeEncodeError ('charmap')
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -48,7 +51,7 @@ if sys.platform == "win32":
         pass
 
 # ---------------------------------------------------------------------------
-# 1. OPTIONAL DEPENDENCY BOOTSTRAPPER & IMPORTS
+# 1. AUTO-BOOTSTRAPPER E AUTO-PROVISIONAMENTO
 # ---------------------------------------------------------------------------
 REQUIRED_PACKAGES = {
     "genanki": "genanki>=0.13.0",
@@ -59,34 +62,27 @@ REQUIRED_PACKAGES = {
     "json_repair": "json-repair>=0.25.0",
 }
 
-def check_or_install_dependencies(auto_install: bool = False) -> None:
-    """Verifies dependencies. If auto_install is True, installs missing packages without --system."""
+def bootstrap_environment() -> None:
+    """Garante que todas as dependências e o binário 'agy' estejam prontos sem intervenção humana."""
     missing = [
         pkg for mod, pkg in REQUIRED_PACKAGES.items()
         if importlib.util.find_spec(mod) is None
     ]
     if missing:
-        if auto_install:
-            print(f"[Auto-Install] Installing missing dependencies: {', '.join(missing)}...")
-            uv_bin = shutil.which("uv")
-            cmd = (
-                [uv_bin, "pip", "install", "--quiet", *missing]
-                if uv_bin
-                else [sys.executable, "-m", "pip", "install", "--quiet", *missing]
-            )
-            try:
-                subprocess.check_call(cmd)
-                print("[Auto-Install] Dependencies successfully installed.")
-            except Exception as e:
-                print(f"[Auto-Install] Warning during package installation: {e}")
-        else:
-            print(f"\n[ERROR] Missing required dependencies: {', '.join(missing)}")
-            print("Please install them using pip:")
-            print(f"  pip install {' '.join(missing)}")
-            print("Or run this script with '--auto-install' to install them automatically.\n")
-            sys.exit(1)
+        print(f"[Auto-Setup] Instalando dependências ausentes: {', '.join(missing)}...")
+        uv_bin = shutil.which("uv")
+        cmd = (
+            [uv_bin, "pip", "install", "--system", "--quiet", *missing]
+            if uv_bin
+            else [sys.executable, "-m", "pip", "install", "--quiet", *missing]
+        )
+        try:
+            subprocess.check_call(cmd)
+            print("[Auto-Setup] Dependências instaladas com sucesso.")
+        except Exception as e:
+            print(f"[Auto-Setup] Aviso ao instalar dependências: {e}")
 
-    # Auto-discover 'agy' binary in PATH if available
+    # Auto-descoberta do binário 'agy' caso não esteja no PATH do sistema
     if not shutil.which("agy"):
         common_paths = [
             Path.home() / ".antigravity" / "bin",
@@ -99,7 +95,9 @@ def check_or_install_dependencies(auto_install: bool = False) -> None:
                 os.environ["PATH"] = f"{p}{os.pathsep}{os.environ.get('PATH', '')}"
                 break
 
-# Lazy-loaded module references
+bootstrap_environment()
+
+# Imports das bibliotecas garantidas pelo bootstrap
 try:
     import genanki
 except ImportError:
@@ -145,7 +143,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("flashcard-architect")
 
-# System Constants
+# Constantes do sistema
 VERSION = "3.2.0"
 MEDIA_DIR = "anki_media"
 MAX_RETRIES = 3
@@ -157,75 +155,75 @@ MODEL_BASIC_ID = 1607392319
 MODEL_CLOZE_ID = 1607392320
 
 # ---------------------------------------------------------------------------
-# 2. DETERMINISTIC DECK ID GENERATOR
+# 2. GERADOR DETERMINÍSTICO DE DECK ID
 # ---------------------------------------------------------------------------
 def get_deck_id(deck_name: str) -> int:
-    """Generates a positive 31-bit integer deterministic Deck ID from the deck name."""
+    """Gera um inteiro positivo de 31 bits único e determinístico a partir do nome do deck."""
     digest = hashlib.sha256(deck_name.strip().lower().encode("utf-8")).hexdigest()
     return int(digest[:8], 16) & 0x7FFFFFFF
 
 # ---------------------------------------------------------------------------
-# 3. PROMPT MATRIX & LOCALIZATION STRATEGIES
+# 3. MATRIZ DE PROMPTS ADAPTATIVOS & CONFIGURAÇÃO
 # ---------------------------------------------------------------------------
 MODE_INSTRUCTIONS = {
     "curated": (
-        "CURATION & HIGH-YIELD MODE (80/20):\n"
-        "- Filter out irrelevant introductory text, lengthy background details, or redundant examples.\n"
-        "- Prioritize high-yield exam concepts, key definitions, core architectures, essential commands, and critical distinctions.\n"
-        "- Synthesize into atomic, direct, and self-contained questions."
+        "MODO CURADORIA & ALTA RECORRÊNCIA (80/20):\n"
+        "- Filtre textos introdutórios irrelevantes, históricos prolixos ou exemplos redundantes.\n"
+        "- Priorize os conceitos mais cobrados em provas e certificações, definições-chave, "
+        "arquiteturas, comandos e diferenciações críticas.\n"
+        "- Reescreva o conteúdo em perguntas atômicas, diretas e autossuficientes."
     ),
     "strict": (
-        "STRICT SOURCE FIDELITY MODE (EXAMS / STANDARDS / CERTIFICATIONS):\n"
-        "- Do NOT omit topics and do NOT alter the technical meaning or exact phrasing of the source text.\n"
-        "- When processing practice exam questions or scenarios, preserve the question prompt, case scenario, and technical terms verbatim on the FRONT of the card.\n"
-        "- On the BACK, provide the exact correct answer followed by a rigorous technical rationale."
+        "MODO FIDELIDADE ESTRITA À FONTE (PROVAS / SIMULADOS / NORMAS):\n"
+        "- NÃO omita tópicos e NÃO altere o sentido ou a terminologia exata do texto-fonte.\n"
+        "- Se o texto de entrada contiver questões de prova ou simulado, preserve fielmente o cenário, "
+        "o comando da questão e os termos técnicos originais na FRENTE do cartão.\n"
+        "- No VERSO, apresente o gabarito exato seguido da justificativa técnica detalhada de cada item."
     ),
     "exam": (
-        "ERROR AUDIT & EXAM TRAPS MODE:\n"
-        "- Analyze each question or topic by identifying common pitfalls, distractor options, and misconception traps.\n"
-        "- Create diagnostic cards that directly address why incorrect options are false (e.g., 'In context X, why is statement Y invalid?').\n"
-        "- Explain the exact root cause of the error on the back and state the correct configuration or standard."
+        "MODO AUDITORIA DE ERROS E PEGADINHAS DE PROVA:\n"
+        "- Analise cada questão ou tópico identificando as pegadinhas clássicas e alternativas incorretas.\n"
+        "- Crie cartões que confrontem o erro comum (ex: 'No contexto X, por que a afirmativa Y é falsa ou incorreta?').\n"
+        "- Explique no verso a causa exata do erro e qual seria a configuração/conceito correto."
     ),
 }
 
 DENSITY_INSTRUCTIONS = {
-    "essential": "ESSENTIAL DENSITY: Generate only critical core flashcards (1 to 2 cards per section/page).",
-    "high": "EXHAUSTIVE DENSITY: Extract maximum atomic flashcards covering every nuance, command, table, exception, and technical note (3 to 6 cards per section/page).",
+    "essential": "DENSIDADE ESSENCIAL: Gere apenas os cartões indispensáveis (1 a 2 cartões por seção/página).",
+    "high": "DENSIDADE EXAUSTIVA: Extraia o máximo de cartões atômicos possíveis cobrindo cada detalhe, tabela, exceção e observação técnica (3 a 6 cartões por seção/página).",
 }
 
 LANG_INSTRUCTIONS = {
-    "en": (
-        "LANGUAGE RULE (ENGLISH):\n"
-        "- Generate all flashcards (front prompt, back answer, and technical rationale) entirely in professional technical English."
-    ),
     "keep": (
-        "BILINGUAL / SOURCE-PRESERVATION RULE (KEEP):\n"
-        "- Preserve 100% of the original question prompts, answer choices, CLI outputs, code snippets, and exam commands in the original exam language (e.g., English for Cisco, AWS, CompTIA).\n"
-        "- The FRONT must maintain the authenticity of the test item.\n"
-        "- The BACK should provide the direct answer and a comprehensive technical explanation in Portuguese, accurately correlating the technical terms."
+        "REGRA DE IDIOMA E PRESERVAÇÃO TÉCNICA (BILÍNGUE / KEEP):\n"
+        "- Preserva 100% dos enunciados originais, alternativas, saídas CLI, códigos e comandos de prova no idioma nativo do documento (ex: Inglês para Cisco/AWS/CompTIA).\n"
+        "- A FRENTE do cartão deve manter a integridade dos termos do exame.\n"
+        "- O VERSO deve fornecer a resposta correta e a Justificativa Técnica detalhada em Português claro e didático, correlacionando os termos técnicos originais."
     ),
     "pt": (
-        "LANGUAGE RULE (PORTUGUESE):\n"
-        "- Translate questions, prompts, and concepts into formal Portuguese, keeping well-established technical terms and commands in their standard form."
+        "REGRA DE IDIOMA: Traduza perguntas, enunciados e conceitos para o Português culto, mantendo comandos e termos técnicos consagrados no original.",
+    ),
+    "en": (
+        "LANGUAGE RULE: Generate all flashcards (front, back, and technical explanations) entirely in English.",
     ),
 }
 
 FILTER_INSTRUCTIONS = {
     "all": (
-        "QUESTION FILTER (ALL):\n"
-        "- Process all questions and topics from the material.\n"
-        "- If a question contains status markings (wrong/incorrect or correct/passed), apply the corresponding tag: 'status::wrong' for errors or 'status::correct' for correct questions."
+        "FILTRO DE QUESTÕES (TODAS):\n"
+        "- Processe todas as questões e tópicos do material.\n"
+        "- Se a questão apresentar marcação de status (wrong/incorrect ou correct/passed), aplique a tag correspondente: 'status::wrong' para erros ou 'status::correct' para acertos."
     ),
     "wrong": (
-        "ERROR-FOCUSED FILTER (INCORRECT ONLY):\n"
-        "- Prioritize questions identified as incorrect/failed (status::wrong) from the practice exam.\n"
-        "- Create high-yield reinforcement flashcards with in-depth technical rationales explaining why the chosen option was wrong and solidifying the correct concept.\n"
-        "- Mandatory tag: 'status::wrong' on each generated card."
+        "FILTRO PRIORITÁRIO DE ERROS (SOMENTE INCORRETAS):\n"
+        "- Foque prioritariamente nas questões marcadas como incorretas/erros (status::wrong) ou identificadas com falha no simulado.\n"
+        "- Crie flashcards de reforço com justificativa técnica aprofundada explicando o porquê do erro e fixando o conceito correto.\n"
+        "- Adicione obrigatoriamente a tag 'status::wrong' em cada cartão."
     ),
     "correct": (
-        "MASTERY FILTER (CORRECT ONLY):\n"
-        "- Process questions identified as passed/correct to consolidate and reinforce mastered topics.\n"
-        "- Mandatory tag: 'status::correct' on each generated card."
+        "FILTRO DE ACERTOS:\n"
+        "- Processe as questões identificadas como corretas no simulado para fixação de conceitos dominados.\n"
+        "- Adicione obrigatoriamente a tag 'status::correct' em cada cartão."
     ),
 }
 
@@ -234,32 +232,32 @@ def build_master_prompt(
     density: str,
     use_media: bool,
     card_style: str,
-    lang: str = "en",
+    lang: str = "keep",
     filter_mode: str = "all"
 ) -> str:
     media_rule = (
-        "4. IMAGE & DIAGRAM MANAGEMENT (SPATIAL Y0 ANCHORING ACTIVE):\n"
-        "   - Whenever the source text marks '[Image: ag_xxxx.webp]' or '[Imagem extraída: ag_xxxx.webp]', "
-        "it is geometrically anchored directly below the question prompt or concept it illustrates.\n"
-        "   - Embed it into the corresponding card using:\n"
+        "4. GESTÃO DE IMAGENS E DIAGRAMAS (ANCORAGEM POSICIONAL ATIVA):\n"
+        "   - Sempre que o texto indicar '[Imagem: ag_xxxx.webp]' ou '[Imagem extraída: ag_xxxx.webp]', "
+        "ela está posicionada exatamente abaixo da questão ou do conceito a que se refere.\n"
+        "   - Associe-a ao cartão correspondente usando:\n"
         "     <br><img src=\"ag_xxxx.webp\">\n"
-        "   - Place on the FRONT if it is a topology, network diagram, UI screenshot, or question prompt visual; "
-        "place on the BACK if it is an explanatory resolution diagram."
+        "   - Insira na FRENTE se for diagrama de topologia, gráfico ou GUI de enunciado; "
+        "ou no VERSO se for diagrama de resolução/gabarito."
         if use_media
-        else "4. TEXT-ONLY TURBO MODE:\n"
-             "   - Ignore external visual references and do NOT include <img> tags."
+        else "4. MODO SOMENTE TEXTO:\n"
+             "   - Ignore referências a figuras externas e NÃO inclua tags <img>."
     )
 
     cloze_rule = (
-        "- For exact commands, port numbers, parameters, or short lists, format cloze deletions ({{c1::term}}) in the question prompt."
+        "- Para listas curtas, portas, comandos ou parâmetros exatos, você pode destacar lacunas no formato Cloze ({{c1::termo}}) na pergunta."
         if card_style == "hybrid"
-        else "- Formulate all notes strictly as Direct Question (front) and Answer + Rationale (back)."
+        else "- Formule todas as notas estritamente no formato Pergunta Direta (frente) e Resposta + Justificativa (verso)."
     )
 
-    lang_rule = LANG_INSTRUCTIONS.get(lang, LANG_INSTRUCTIONS["en"])
+    lang_rule = LANG_INSTRUCTIONS.get(lang, LANG_INSTRUCTIONS["keep"])
     filter_rule = FILTER_INSTRUCTIONS.get(filter_mode, FILTER_INSTRUCTIONS["all"])
 
-    return f"""You are the Flashcard Architect — an expert cognitive learning engineer and Anki FSRS optimization specialist.
+    return f"""Você é o Flashcard Architect — especialista em aprendizagem ativa, preparação de alta performance e algoritmo FSRS do Anki.
 
 {MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS['curated'])}
 {DENSITY_INSTRUCTIONS.get(density, DENSITY_INSTRUCTIONS['high'])}
@@ -267,31 +265,31 @@ def build_master_prompt(
 {filter_rule}
 {cloze_rule}
 
-MANDATORY CARD GENERATION RULES:
-1. FRONT (Question): Clear, objective, self-contained prompt (no dangling pronouns like 'this diagram' without context). Each card must test exactly ONE mental association.
-   - When the text includes a header like '[Page X | Question Y (Global #Z)]', preserve it as an autonomous context anchor.
-2. BACK (Answer): Direct answer prominently styled inside <span class="ans"><b>Direct Answer</b></span> followed by <br><br><i>Rationale:</i> with a concise, rigorous, cause-and-effect technical explanation.
-3. PERMITTED HTML TAGS (DO NOT USE INLINE style=""): <b>term</b>, <i>concept</i>, <code>command/port</code>, <ul><li>item</li></ul>, <br>.
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO:
+1. FRENTE (pergunta): Enunciado claro, objetivo e autossuficiente (sem pronomes soltos como 'esta figura' sem contexto). Cada cartão deve testar rigorosamente UMA ÚNICA associação mental.
+   - Quando o texto possuir cabeçalho como '[Pág. X | QY]', use-o como contexto autônomo.
+2. VERSO (resposta): Gabarito direto destacado dentro de <span class="ans"><b>Resposta direta</b></span> seguido de <br><br><i>Justificativa:</i> com explicação técnica concisa, sólida e causal.
+3. ESTILOS HTML PERMITIDOS (NÃO USE style="" INLINE): <b>termo</b>, <i>conceito</i>, <code>comando/porta</code>, <ul><li>item</li></ul>, <br>.
 {media_rule}
-5. MANDATORY METADATA:
-   - "concept_id": stable snake_case identifier (e.g., "ccna_ospf_dr_bdr_priority_p12_q1").
-   - "tags": array of snake_case tags (e.g., ["networking", "ospf", "status::wrong"]).
-   - "suggested_deck": hierarchical taxonomy in "Category::Subcategory::Topic" format.
+5. METADADOS OBRIGATÓRIOS:
+   - "id_conceito": crie um identificador estável em snake_case (ex: "ccna_ospf_dr_bdr_election_p14_q3").
+   - "tags": array com tags em snake_case (ex: ["redes", "ospf", "status::wrong"]).
+   - "suggested_deck": taxonomia hierárquica no formato "Categoria::Subcategoria::Assunto".
 
-6. EXCLUSIVE OUTPUT: Return ONLY a raw JSON array (no ```json code fences, no introductory or concluding chatter):
+6. SAÍDA EXCLUSIVA: Retorne APENAS um array JSON puro (sem blocos ```json, sem introduções ou saudações):
 [
   {{
-    "concept_id": "ccna_ospf_dr_bdr_priority_p12_q1",
-    "question": "[Page 12 | Question 1 (Global #1)] Which OSPF router priority value prevents a router from participating in the DR/BDR election?<br><img src=\\"ag_3a8f12c9b4e1.webp\\">",
-    "answer": "<span class=\\"ans\\"><b>Priority value of 0.</b></span><br><br><i>Rationale:</i> In OSPF, a router configured with an interface priority of <code>0</code> (via <code>ip ospf priority 0</code>) becomes permanently a <i>DROTHER</i> and is ineligible to become a <i>DR</i> or <i>BDR</i>.",
-    "tags": ["networking", "ospf", "status::wrong"],
-    "suggested_deck": "Certifications::Cisco::CCNA_200_301"
+    "id_conceito": "ccna_ospf_dr_bdr_priority_p12_q1",
+    "pergunta": "[Pág. 12 | Q1] Which OSPF router priority value prevents a router from participating in the DR/BDR election?<br><img src=\\"ag_3a8f12c9b4e1.webp\\">",
+    "resposta": "<span class=\\"ans\\"><b>Priority value of 0.</b></span><br><br><i>Justificativa:</i> No protocolo OSPF, um roteador configurado com prioridade de interface igual a <code>0</code> (via comando <code>ip ospf priority 0</code>) torna-se permanentemente um <i>DROTHER</i> e nunca é eleito como <i>DR</i> ou <i>BDR</i>.",
+    "tags": ["redes", "ospf", "status::wrong"],
+    "suggested_deck": "Certificacoes::Cisco::CCNA_200_301"
   }}
 ]
 """
 
 # ---------------------------------------------------------------------------
-# 4. NATIVE DARK MODE CSS STYLESHEET
+# 4. FOLHA DE ESTILOS CSS DARK MODE NATIVA
 # ---------------------------------------------------------------------------
 ANKI_CSS = """
 .card {
@@ -323,7 +321,7 @@ hr#answer {
 b, strong { color: #58a6ff; font-weight: 600; }
 i, em { color: #f0883e; }
 
-/* Maximum specificity for neon green key answer even with nested bold tags */
+/* Verde neon com especificidade máxima para o gabarito mesmo com <b> interno */
 .ans, .ans b, .ans strong {
     color: #4af626 !important;
     font-weight: 700;
@@ -334,7 +332,7 @@ i, em { color: #f0883e; }
     color: #4af626 !important;
 }
 
-.justificativa, .rationale {
+.justificativa {
     margin-top: 12px;
     padding: 10px 14px;
     background-color: #161b22;
@@ -394,7 +392,7 @@ th {
 """.strip()
 
 # ---------------------------------------------------------------------------
-# 5. EXTRACTION PIPELINE WITH Y0 GEOMETRIC ANCHORING & STATUS DETECTION
+# 5. PIPELINE DE EXTRAÇÃO COM ANCORAGEM ESPACIAL & DETECÇÃO DE STATUS
 # ---------------------------------------------------------------------------
 def ensure_media_dir() -> Path:
     p = Path(MEDIA_DIR)
@@ -402,7 +400,7 @@ def ensure_media_dir() -> Path:
     return p
 
 def save_normalized_image(img_bytes: bytes, min_dim: int = 50) -> str | None:
-    """Filters noise/logos, converts to WebP, and names using content SHA-256 hash."""
+    """Filtra ruídos/logos, converte para WebP e nomeia por hash SHA-256 (anti-colisão global)."""
     if len(img_bytes) < 1800:
         return None
 
@@ -412,7 +410,7 @@ def save_normalized_image(img_bytes: bytes, min_dim: int = 50) -> str | None:
                 w, h = im.size
                 if w < min_dim or h < min_dim:
                     return None
-                # Filter out linear decorative banners or spacers
+                # Filtra faixas decorativas ou banners lineares
                 if (w / max(h, 1)) > 14 or (h / max(w, 1)) > 14:
                     return None
 
@@ -433,12 +431,13 @@ def save_normalized_image(img_bytes: bytes, min_dim: int = 50) -> str | None:
 
         return filename
     except Exception as e:
-        log.debug(f"Notice during image normalization: {e}")
+        log.debug(f"Aviso ao normalizar imagem: {e}")
         return None
 
 def detect_question_status(text: str) -> str:
-    """Detects whether a question or block is marked as incorrect/wrong or correct/passed."""
+    """Detecta se uma questão ou bloco foi marcado como incorreto/erro ou correto."""
     lower = text.lower()
+    # Padrões fortes de erro / incorreto
     wrong_patterns = [
         r"\b(?:incorrect|wrong|failed|errou|incorreta|invalida)\b",
         r"your\s+answer.*(?:incorrect|wrong)",
@@ -450,6 +449,7 @@ def detect_question_status(text: str) -> str:
         if re.search(pat, lower):
             return "wrong"
 
+    # Padrões de acerto
     correct_patterns = [
         r"\b(?:correct|passed|acertou|correta)\b",
         r"your\s+answer.*(?:correct|right)",
@@ -469,13 +469,12 @@ def extract_pdf_content(
     filter_mode: str = "all"
 ) -> tuple[list[str], list[str], dict]:
     """
-    Extracts PDF content using Spatial Geometric Anchoring by Y-coordinate (y0).
-    Aligns diagrams and topologies directly between prompt and options,
-    injects sequential global indexing [Page X | Question Y (Global #Z)],
-    and tracks comprehensive audit statistics.
+    Extrai o PDF utilizando Ancoragem Geométrica por Coordenada Y (y0).
+    Alinha diagramas e imagens exatamente entre o enunciado e as opções,
+    insere prefixo de bateria/página [Pág. X | QY] e rastreia estatísticas de auditoria.
     """
     if fitz is None:
-        log.error("[ERROR] PyMuPDF is not installed. Run: pip install pymupdf")
+        log.error("[ERRO] PyMuPDF não está instalado. Execute: pip install PyMuPDF")
         sys.exit(1)
 
     doc = fitz.open(pdf_path)
@@ -500,13 +499,13 @@ def extract_pdf_content(
 
     for page_idx, page in enumerate(doc):
         page_num = page_idx + 1
-        page_elements = []  # List of dicts: {"y0": float, "type": "text"|"image", "content": str}
+        page_elements = []  # Lista de dicts: {"y0": float, "type": "text"|"image", "content": str}
 
-        # 1. Collect native text blocks with bounding boxes
+        # 1. Coleta blocos de texto nativos com bounding boxes
         text_blocks = page.get_text("blocks")
         for b in text_blocks:
             # b: (x0, y0, x1, y1, text, block_no, block_type)
-            if b[6] == 0:  # Type 0 = Text
+            if b[6] == 0:  # Tipo 0 = Texto
                 b_text = b[4].strip()
                 if b_text:
                     page_elements.append({
@@ -515,7 +514,7 @@ def extract_pdf_content(
                         "content": b_text
                     })
 
-        # Transparent offline OCR for scanned pages if text is sparse
+        # OCR transparente em páginas escaneadas se tiver quase nenhum texto
         raw_page_text = " ".join([elem["content"] for elem in page_elements if elem["type"] == "text"])
         if len(raw_page_text) < 40 and RAPID_OCR_AVAILABLE:
             try:
@@ -527,15 +526,15 @@ def extract_pdf_content(
                     page_elements.append({
                         "y0": 0.0,
                         "type": "text",
-                        "content": f"[OCR Text]\n{ocr_text}"
+                        "content": f"[Texto OCR]\n{ocr_text}"
                     })
-                    log.info(f"      [Offline OCR] Extracted {len(ocr_text)} characters on page {page_num}")
+                    log.info(f"      [OCR Offline] Extraídos {len(ocr_text)} caracteres na pág. {page_num}")
             except Exception:
                 pass
 
-        # 2. Collect images with physical Y-coordinates on the page
+        # 2. Coleta imagens com suas coordenadas Y reais na página
         if use_media:
-            # Bitmaps via XRef
+            # Bitmaps XRef
             for img_info in page.get_images(full=True):
                 try:
                     xref = img_info[0]
@@ -556,12 +555,12 @@ def extract_pdf_content(
                             page_elements.append({
                                 "y0": img_y0,
                                 "type": "image",
-                                "content": f"[Image: {fname}]"
+                                "content": f"[Imagem: {fname}]"
                             })
                 except Exception:
                     pass
 
-            # Vector drawings & clustered topologies via cluster_drawings
+            # Agrupamentos vetoriais (topologias desenhadas via cluster_drawings)
             try:
                 for rect in page.cluster_drawings():
                     if rect.width >= 90 and rect.height >= 70:
@@ -577,53 +576,53 @@ def extract_pdf_content(
                                 page_elements.append({
                                     "y0": rect.y0,
                                     "type": "image",
-                                    "content": f"[Image: {vname}]"
+                                    "content": f"[Imagem: {vname}]"
                                 })
             except Exception:
                 pass
 
-        # 3. Rigorous Spatial Sorting by Y0 Coordinate (Top-to-Bottom)
+        # 3. Ordenação Espacial rigorosa por coordenada Y (Top-to-Bottom)
         page_elements.sort(key=lambda elem: (round(elem["y0"], 1), elem["type"] == "text"))
 
-        # 4. Format page block with global indexing and status detection
+        # 4. Formata o bloco da página com indexação de questões e detecção de status
         page_lines = []
         for elem in page_elements:
             content = elem["content"]
             if elem["type"] == "text":
-                # Detect new question and inject canonical prefix [Page X | Question Y (Global #Z)]
+                # Detecta nova questão e indexa com prefixo [Pág. X | QY]
                 m_q = question_regex.search(content)
                 if m_q:
                     global_question_counter += 1
                     stats["total_questions_detected"] += 1
                     q_num = m_q.group(1) or m_q.group(2) or str(global_question_counter)
-                    header = f"\n### [Page {page_num} | Question {q_num} (Global #{global_question_counter})]"
+                    header = f"\n### [Pág. {page_num} | Questão {q_num} (Global #{global_question_counter})]"
                     content = question_regex.sub(f"{header}\n", content, count=1)
 
-                # Identify practice exam status
+                # Identifica status
                 st = detect_question_status(content)
                 if st == "wrong":
                     stats["wrong_questions"] += 1
-                    content = f"[STATUS: INCORRECT / WRONG]\n{content}"
+                    content = f"[STATUS: INCORRETO / WRONG]\n{content}"
                 elif st == "correct":
                     stats["correct_questions"] += 1
-                    content = f"[STATUS: CORRECT]\n{content}"
+                    content = f"[STATUS: CORRETO / CORRECT]\n{content}"
                 else:
                     if m_q:
                         stats["unspecified_questions"] += 1
 
             page_lines.append(content)
 
-        formatted_page = f"--- PAGE {page_num} ---\n" + "\n\n".join(page_lines)
+        formatted_page = f"--- PÁGINA {page_num} ---\n" + "\n\n".join(page_lines)
         pages_content.append(formatted_page)
 
-    mode_label = f"{len(media_files)} anchored diagram(s)" if use_media else "Turbo Mode (Text-Only)"
-    log.info(f"      → PDF: {len(doc)} page(s) | {stats['total_questions_detected']} question(s) detected | {mode_label}.")
+    mode_label = f"{len(media_files)} diagramas/mídias ancorados" if use_media else "Modo Turbo (Sem Imagens)"
+    log.info(f"      → PDF: {len(doc)} página(s) | {stats['total_questions_detected']} questões detectadas | {mode_label}.")
     return pages_content, media_files, stats
 
 def extract_docx_content(docx_path: str, use_media: bool) -> tuple[list[str], list[str], dict]:
-    """Extracts text and embedded images from DOCX documents."""
+    """Extrai texto e imagens de DOCX com metadados."""
     if not DOCX_AVAILABLE:
-        log.error("[ERROR] python-docx is not installed. Run: pip install python-docx")
+        log.error("[ERRO] python-docx não instalado. Execute: pip install python-docx")
         sys.exit(1)
 
     doc = DocxDocument(docx_path)
@@ -653,7 +652,7 @@ def extract_docx_content(docx_path: str, use_media: bool) -> tuple[list[str], li
                             if fpath not in media_files:
                                 media_files.append(fpath)
                                 stats["diagrams_mapped"] += 1
-                            p_text += f"\n[Image: {fname}]\n"
+                            p_text += f"\n[Imagem: {fname}]\n"
             except Exception:
                 pass
 
@@ -666,8 +665,8 @@ def extract_docx_content(docx_path: str, use_media: bool) -> tuple[list[str], li
             paragraphs_text.append(p_text)
 
     full_text = "\n\n".join(paragraphs_text)
-    mode_label = f"{len(media_files)} image(s)" if use_media else "Turbo Mode"
-    log.info(f"      → DOCX: {len(paragraphs_text)} paragraph(s) | {mode_label}.")
+    mode_label = f"{len(media_files)} imagem(ns)" if use_media else "Modo Turbo"
+    log.info(f"      → DOCX: {len(paragraphs_text)} parágrafo(s) | {mode_label}.")
     return [full_text], media_files, stats
 
 def extract_markdown_content(
@@ -675,7 +674,7 @@ def extract_markdown_content(
     use_media: bool,
     attach_dir: str | None = None
 ) -> tuple[list[str], list[str], dict]:
-    """Extracts Markdown content resolving local visual attachments."""
+    """Extrai conteúdo de Markdown com resolução de links de imagem e metadados."""
     md_dir = os.path.dirname(os.path.abspath(md_path))
     content = ""
     for enc in ["utf-8", "latin-1", "cp1252"]:
@@ -739,8 +738,8 @@ def extract_markdown_content(
                 except Exception:
                     pass
 
-    mode_label = f"{len(media_files)} image(s)" if use_media else "Turbo Mode"
-    log.info(f"      → Markdown: {len(content):,} character(s) | {mode_label}.")
+    mode_label = f"{len(media_files)} imagem(ns)" if use_media else "Modo Turbo"
+    log.info(f"      → Markdown: {len(content):,} caracteres | {mode_label}.")
     return [content], media_files, stats
 
 def extract_content(
@@ -749,7 +748,7 @@ def extract_content(
     attach_dir: str | None = None,
     filter_mode: str = "all"
 ) -> tuple[list[str], list[str], dict]:
-    """Universal intelligent content router with lazy media extraction and statistics tracking."""
+    """Roteador inteligente de extração com controle condicional de mídia e estatísticas."""
     ext = os.path.splitext(path)[1].lower()
     if ext == ".pdf":
         return extract_pdf_content(path, use_media, filter_mode=filter_mode)
@@ -772,41 +771,34 @@ def extract_content(
                 }
             except UnicodeDecodeError:
                 continue
-        return [""], [], {
-            "total_pages": 0,
-            "total_questions_detected": 0,
-            "wrong_questions": 0,
-            "correct_questions": 0,
-            "unspecified_questions": 0,
-            "diagrams_mapped": 0
-        }
+        return [""], [], {"total_pages": 0, "total_questions_detected": 0, "wrong_questions": 0, "correct_questions": 0, "unspecified_questions": 0, "diagrams_mapped": 0}
 
 # ---------------------------------------------------------------------------
-# 6. INTERACTIVE 5-AXIS PRE-FLIGHT TRIAGE WIZARD
+# 6. QUESTIONÁRIO INTERATIVO DE TERMINAL (WIZARD 5-EIXOS)
 # ---------------------------------------------------------------------------
 def run_interactive_wizard(args: argparse.Namespace) -> argparse.Namespace:
-    """Executes a 5-axis pre-flight triage questionnaire when flags are omitted."""
+    """Executa o questionário rápido de 5 eixos quando executado sem flags completas."""
     if args.non_interactive or args.no_ai:
         args.mode = args.mode or "curated"
         args.use_media = True if args.media is True else (False if args.no_media else True)
         args.filter = args.filter or "all"
-        args.lang = args.lang or "en"
+        args.lang = args.lang or "keep"
         args.density = args.density or "high"
         args.style = args.style or "qa"
         return args
 
-    # If all primary flags are supplied via CLI, skip interactive prompt
+    # Se já passou todas as flags principais na linha de comando, não pergunta
     if args.mode and (args.media or args.no_media) and args.filter and args.lang and args.style:
         args.use_media = True if args.media else False
         return args
 
     print("\n" + "═" * 72)
-    print("🧠 FLASHCARD ARCHITECT v3.2.0 — 5-AXIS PRE-FLIGHT TRIAGE WIZARD")
+    print("🧠 FLASHCARD ARCHITECT v3.2.0 — CONFIGURAÇÃO RÁPIDA (WIZARD 5-EIXOS)")
     print("═" * 72)
-    print("💡 Tip: Press Enter to accept all recommended defaults,")
-    print("   or enter comma-separated numbers in a single line (e.g., '1, 1, 1, 1, 1'):\n")
+    print("💡 Você pode teclar Enter para aceitar todos os padrões recomendados,")
+    print("   ou responder em linha única (ex: '1, 1, 1, 1, 1' ou '2, 1, 2, 1, 2'):\n")
 
-    quick_input = input("⚡ Quick 1-Line Configuration [Press Enter for step-by-step]: ").strip()
+    quick_input = input("⚡ Configuração em linha única [Enter para responder passo a passo]: ").strip()
     if quick_input and ("," in quick_input or " " in quick_input):
         delimiter = "," if "," in quick_input else " "
         parts = [p.strip() for p in quick_input.split(delimiter) if p.strip()]
@@ -819,54 +811,54 @@ def run_interactive_wizard(args: argparse.Namespace) -> argparse.Namespace:
         args.mode = {"1": "curated", "2": "strict", "3": "exam"}.get(mode_choice, "curated")
         args.use_media = (media_choice == "1")
         args.filter = {"1": "all", "2": "wrong", "3": "correct"}.get(filter_choice, "all")
-        args.lang = {"1": "en", "2": "keep", "3": "pt"}.get(lang_choice, "en")
+        args.lang = {"1": "keep", "2": "pt", "3": "en"}.get(lang_choice, "keep")
         args.style = "hybrid" if style_choice == "2" else "qa"
         args.density = "essential" if style_choice == "3" else "high"
     else:
-        # Axis 1: Content Fidelity
+        # Eixo 1: Fidelidade
         if not args.mode:
-            print("\n[1/5] Content Treatment & Fidelity:")
-            print("  [1] High-Yield Curation (80/20: Key concepts rewritten atomically) [Default]")
-            print("  [2] Strict Source Fidelity (Exams/Standards: Verbatim prompts & technical terms)")
-            print("  [3] Error Diagnostic & Pitfalls (Deep dive into why distractors are false)")
-            choice_mode = input("👉 Choose [1/2/3] (Default: 1): ").strip()
+            print("\n[1/5] Fidelidade e Tratamento do Conteúdo:")
+            print("  [1] Curadoria & Recorrência (80/20: Conceitos-chave reescritos de forma atômica) [Padrão]")
+            print("  [2] Fidelidade Estrita à Fonte (Provas/Simulados/Normas: Preserva enunciado literal)")
+            print("  [3] Foco em Erros & Pegadinhas (Dissecação diagnóstica de alternativas falsas)")
+            choice_mode = input("👉 Escolha [1/2/3] (Padrão: 1): ").strip()
             args.mode = {"1": "curated", "2": "strict", "3": "exam"}.get(choice_mode, "curated")
 
-        # Axis 2: Media & Diagrams
+        # Eixo 2: Mídias e Diagramas
         if not args.media and not args.no_media:
-            print("\n[2/5] Media & Visual Diagrams (.pdf, .md, .docx):")
-            print("  [1] Yes — Extract with Y0 Spatial Anchoring & embed WebP into Anki [Default]")
-            print("  [2] No — Text-Only Turbo Mode (Maximum processing speed)")
-            choice_media = input("👉 Choose [1/2] (Default: 1): ").strip()
+            print("\n[2/5] Mídias e Diagramas (.pdf, .md, .docx):")
+            print("  [1] Sim — Extrair com Ancoragem Geométrica Y0 e embutir WebP no Anki [Padrão]")
+            print("  [2] Não — Somente Texto (Modo Turbo de máxima velocidade)")
+            choice_media = input("👉 Escolha [1/2] (Padrão: 1): ").strip()
             args.use_media = (choice_media != "2")
         else:
             args.use_media = True if args.media else False
 
-        # Axis 3: Practice Exam Question Filter
+        # Eixo 3: Filtro de Questões de Simulado
         if not args.filter:
-            print("\n[3/5] Practice Exam Question Filtering:")
-            print("  [1] All Questions (Full document coverage with automated status tagging) [Default]")
-            print("  [2] Incorrect / Failed Only (status::wrong — Surgical focus on learning gaps)")
-            print("  [3] Correct Only (status::correct — Mastery reinforcement)")
-            choice_filter = input("👉 Choose [1/2/3] (Default: 1): ").strip()
+            print("\n[3/5] Filtro de Questões de Simulado:")
+            print("  [1] Todas as Questões (Processa o documento completo com auto-tagging) [Padrão]")
+            print("  [2] Somente Erros / Incorretas (status::wrong — Foco cirúrgico em deficiências)")
+            print("  [3] Somente Acertos (status::correct — Fixação de tópicos dominados)")
+            choice_filter = input("👉 Escolha [1/2/3] (Padrão: 1): ").strip()
             args.filter = {"1": "all", "2": "wrong", "3": "correct"}.get(choice_filter, "all")
 
-        # Axis 4: Language Mode
+        # Eixo 4: Preservação de Idioma
         if not args.lang:
-            print("\n[4/5] Language Configuration:")
-            print("  [1] English (Standard technical English for international exams) [Default]")
-            print("  [2] Bilingual / Keep (Verbatim prompts/CLI in English, technical rationale in Portuguese)")
-            print("  [3] Portuguese (Full Portuguese translation)")
-            choice_lang = input("👉 Choose [1/2/3] (Default: 1): ").strip()
-            args.lang = {"1": "en", "2": "keep", "3": "pt"}.get(choice_lang, "en")
+            print("\n[4/5] Idioma do Material de Estudo:")
+            print("  [1] Preservar Original / Bilíngue (keep: Enunciado/CLI em Inglês, Explicação em PT) [Padrão]")
+            print("  [2] Traduzir tudo para Português (pt)")
+            print("  [3] Gerar integralmente em Inglês (en)")
+            choice_lang = input("👉 Escolha [1/2/3] (Padrão: 1): ").strip()
+            args.lang = {"1": "keep", "2": "pt", "3": "en"}.get(choice_lang, "keep")
 
-        # Axis 5: Format & Density
+        # Eixo 5: Formato e Densidade
         if not args.style:
-            print("\n[5/5] Card Format & Generation Density:")
-            print("  [1] Exhaustive Classic Q&A (3 to 6 cards/section) [Default]")
-            print("  [2] Hybrid Mode (Q&A + Cloze Deletions for commands, ports, and tables)")
-            print("  [3] Essential Density (1 to 2 cards/section, core concepts only)")
-            choice_style = input("👉 Choose [1/2/3] (Default: 1): ").strip()
+            print("\n[5/5] Formato dos Flashcards & Densidade:")
+            print("  [1] Pergunta & Resposta Clássico Exaustivo (3 a 6 cards/página) [Padrão]")
+            print("  [2] Híbrido (P/R + Lacunas Cloze para comandos/portas/tabelas)")
+            print("  [3] Essencial Enxuto (Apenas conceitos vitais, 1 a 2 cards/página)")
+            choice_style = input("👉 Escolha [1/2/3] (Padrão: 1): ").strip()
             if choice_style == "2":
                 args.style = "hybrid"
                 args.density = "high"
@@ -879,15 +871,15 @@ def run_interactive_wizard(args: argparse.Namespace) -> argparse.Namespace:
 
     print("\n" + "─" * 72)
     print(
-        f"✅ Active Config: Mode={args.mode.upper()} | "
-        f"Media={'ENABLED (Y0)' if args.use_media else 'DISABLED (Turbo)'} | "
-        f"Filter={args.filter.upper()} | Language={args.lang.upper()} | Style={args.style.upper()}"
+        f"✅ Configuração Ativa: Modo={args.mode.upper()} | "
+        f"Imagens={'ATIVADO (Y0)' if args.use_media else 'DESATIVADO (Turbo)'} | "
+        f"Filtro={args.filter.upper()} | Idioma={args.lang.upper()} | Estilo={args.style.upper()}"
     )
     print("─" * 72 + "\n")
     return args
 
 # ---------------------------------------------------------------------------
-# 7. CHUNKING WITH SLIDING OVERLAP
+# 7. CHUNKING COM JANELA DESLIZANTE (OVERLAP)
 # ---------------------------------------------------------------------------
 def chunk_with_overlap(pages: list[str], max_chars_per_chunk: int = 8000, overlap_ratio: float = 0.15) -> list[str]:
     chunks = []
@@ -918,10 +910,9 @@ def chunk_with_overlap(pages: list[str], max_chars_per_chunk: int = 8000, overla
     return chunks
 
 # ---------------------------------------------------------------------------
-# 8. MULTI-LANGUAGE JSON RESPONSE PARSER & VALIDATOR
+# 8. PARSER E VALIDAÇÃO DE RESPOSTAS JSON
 # ---------------------------------------------------------------------------
 def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
-    """Parses and validates flashcard payloads accepting English and Portuguese keys."""
     if not raw_response or not raw_response.strip():
         return [], ""
 
@@ -959,42 +950,24 @@ def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
         if not isinstance(item, dict):
             continue
 
-        q = (
-            item.get("question") or
-            item.get("front") or
-            item.get("pergunta") or
-            ""
-        ).strip()
-        a = (
-            item.get("answer") or
-            item.get("back") or
-            item.get("resposta") or
-            ""
-        ).strip()
-        if not q or not a:
+        p = item.get("pergunta", "").strip()
+        r = item.get("resposta", "").strip()
+        if not p or not r:
             continue
 
-        cid = (
-            item.get("concept_id") or
-            item.get("id") or
-            item.get("id_conceito") or
-            ""
-        ).strip()
+        cid = item.get("id_conceito", "").strip()
         tags = item.get("tags", [])
         if not isinstance(tags, list):
             tags = [str(tags)]
         tags = [str(t).strip().lower().replace(" ", "_") for t in tags if t]
 
         if not suggested_deck and item.get("suggested_deck"):
-            suggested_deck = str(item.get("suggested_deck")).strip()
+            suggested_deck = item.get("suggested_deck").strip()
 
         valid_cards.append({
-            "concept_id": cid,
-            "question": q,
-            "answer": a,
             "id_conceito": cid,
-            "pergunta": q,
-            "resposta": a,
+            "pergunta": p,
+            "resposta": r,
             "tags": tags,
             "suggested_deck": item.get("suggested_deck", "")
         })
@@ -1002,31 +975,31 @@ def parse_and_validate_cards(raw_response: str) -> tuple[list[dict], str]:
     return valid_cards, suggested_deck
 
 def reconcile_card_images(cards: list[dict], available_media: list[str]) -> None:
-    """Ensures <img> tags in cards reference existing WebP files in anki_media/."""
+    """Garante que tags <img> nos cartões apontem para arquivos WebP existentes em anki_media/."""
     if not available_media:
         return
     basenames = [os.path.basename(m) for m in available_media]
     for card in cards:
-        for field in ["question", "answer", "pergunta", "resposta", "front", "back"]:
-            if field in card and isinstance(card[field], str):
-                text = card[field]
-                for m in re.finditer(r'<img[^>]+src=["\'](.*?)["\']', text, re.IGNORECASE):
-                    img_src = m.group(1).strip()
-                    src_base = os.path.basename(img_src)
-                    if src_base not in basenames:
-                        for b in basenames:
-                            if b in src_base or src_base in b:
-                                card[field] = card[field].replace(img_src, b)
-                                break
+        for field in ["pergunta", "resposta"]:
+            text = card[field]
+            for m in re.finditer(r'<img[^>]+src=["\'](.*?)["\']', text, re.IGNORECASE):
+                img_src = m.group(1).strip()
+                src_base = os.path.basename(img_src)
+                if src_base not in basenames:
+                    for b in basenames:
+                        if b in src_base or src_base in b:
+                            card[field] = card[field].replace(img_src, b)
+                            break
 
 # ---------------------------------------------------------------------------
-# 9. NATIVE INFERENCE ENGINE (ANTIGRAVITY CLI)
+# 9. GERAÇÃO NATIVA COM ANTIGRAVITY CLI (AGY)
 # ---------------------------------------------------------------------------
 def call_antigravity_cli(prompt_text: str, model: str = DEFAULT_MODEL, effort: str = DEFAULT_EFFORT) -> str | None:
     cmd = [
         "agy",
         "--model", model,
         "--effort", effort,
+        "--dangerously-skip-permissions",
         "-p", prompt_text
     ]
 
@@ -1040,18 +1013,18 @@ def call_antigravity_cli(prompt_text: str, model: str = DEFAULT_MODEL, effort: s
         )
         stdout, stderr = proc.communicate(timeout=240)
         if proc.returncode != 0:
-            log.warning(f"  ⚠ Antigravity CLI exited with code {proc.returncode}: {stderr.strip()}")
+            log.warning(f"  ⚠ Antigravity CLI retornou código {proc.returncode}: {stderr.strip()}")
             return None
         return stdout.strip()
     except subprocess.TimeoutExpired:
-        log.warning("  ⚠ Response timeout exceeded in Antigravity CLI (240s).")
+        log.warning("  ⚠ Tempo limite de resposta excedido no Antigravity CLI (240s).")
         proc.kill()
         return None
     except FileNotFoundError:
-        log.error("[ERROR] 'agy' CLI binary not found in PATH.")
+        log.error("[ERRO] Binário 'agy' não encontrado no PATH.")
         return None
     except Exception as e:
-        log.warning(f"  ⚠ Unexpected error invoking Antigravity CLI: {e}")
+        log.warning(f"  ⚠ Erro inesperado ao invocar Antigravity CLI: {e}")
         return None
 
 def generate_flashcards_antigravity(
@@ -1064,11 +1037,11 @@ def generate_flashcards_antigravity(
     overall_suggested_deck = ""
     total_chunks = len(chunks)
 
-    log.info(f"\n  Starting native Antigravity inference ({model} - reasoning effort: {effort})...")
+    log.info(f"\n  Iniciando processamento nativo via Antigravity ({model} - esforço: {effort})...")
 
     for idx, chunk in enumerate(chunks):
-        log.info(f"  → Batch {idx + 1}/{total_chunks} (~{len(chunk):,} characters)...")
-        prompt = f"{master_prompt}\n\nSTUDY MATERIAL:\n{chunk}"
+        log.info(f"  → Lote {idx + 1}/{total_chunks} (~{len(chunk):,} caracteres)...")
+        prompt = f"{master_prompt}\n\nMATERIAL DE ESTUDO:\n{chunk}"
 
         success = False
         for attempt in range(1, MAX_RETRIES + 1):
@@ -1082,24 +1055,24 @@ def generate_flashcards_antigravity(
                 all_cards.extend(cards)
                 if deck_sug and not overall_suggested_deck:
                     overall_suggested_deck = deck_sug
-                log.info(f"     ✓ {len(cards)} flashcard(s) successfully generated.")
+                log.info(f"     ✓ {len(cards)} flashcard(s) gerado(s) com sucesso.")
                 success = True
                 break
             else:
-                log.warning(f"     ⚠ Batch {idx + 1} produced no valid cards (attempt {attempt}/{MAX_RETRIES})")
+                log.warning(f"     ⚠ Resposta do lote {idx + 1} sem cards válidos (tentativa {attempt}/{MAX_RETRIES})")
                 time.sleep(RETRY_DELAY_SECS)
 
         if not success:
-            log.error(f"     ✗ Batch {idx + 1} failed after {MAX_RETRIES} attempts.")
+            log.error(f"     ✗ Falha no lote {idx + 1} após {MAX_RETRIES} tentativas.")
 
     return all_cards, overall_suggested_deck
 
 # ---------------------------------------------------------------------------
-# 10. ANKI PACKAGE BUILDER (.apkg) WITH BASIC + CLOZE DUAL ROUTING
+# 10. MONTAGEM DO PACOTE ANKI (.apkg) COM MODELOS DUAIS (BASIC + CLOZE)
 # ---------------------------------------------------------------------------
 def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: str, output_path: str) -> tuple[int, int]:
     if genanki is None:
-        log.error("[ERROR] genanki is not installed. Run with --auto-install or: pip install genanki")
+        log.error("[ERRO] genanki não instalado. Execute: pip install genanki")
         sys.exit(1)
 
     deck_id = get_deck_id(deck_name)
@@ -1107,11 +1080,11 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
     basic_model = genanki.Model(
         MODEL_BASIC_ID,
         "Flashcard Architect Native Basic",
-        fields=[{"name": "Question"}, {"name": "Answer"}],
+        fields=[{"name": "Pergunta"}, {"name": "Resposta"}],
         templates=[{
-            "name": "Basic Card",
-            "qfmt": '<div class="card-front">{{Question}}</div>',
-            "afmt": '{{FrontSide}}<hr id="answer"><div class="card-back">{{Answer}}</div>',
+            "name": "Cartão Básico",
+            "qfmt": '<div class="card-front">{{Pergunta}}</div>',
+            "afmt": '{{FrontSide}}<hr id="answer"><div class="card-back">{{Resposta}}</div>',
         }],
         css=ANKI_CSS
     )
@@ -1121,7 +1094,7 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
         "Flashcard Architect Native Cloze",
         fields=[{"name": "Text"}, {"name": "Extra"}],
         templates=[{
-            "name": "Cloze Card",
+            "name": "Cartão Cloze",
             "qfmt": '<div class="card-front">{{cloze:Text}}</div>',
             "afmt": '<div class="card-front">{{cloze:Text}}</div><hr id="answer"><div class="card-back">{{Extra}}</div>',
         }],
@@ -1137,18 +1110,18 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
     cloze_regex = re.compile(r"\{\{c\d+::")
 
     for card in flashcards:
-        q = card.get("question") or card.get("pergunta", "")
-        a = card.get("answer") or card.get("resposta", "")
-        cid = card.get("concept_id") or card.get("id_conceito")
-        tags = card.get("tags", ["flashcard-architect"])
+        p = card["pergunta"]
+        r = card["resposta"]
+        cid = card.get("id_conceito")
+        tags = card.get("tags", ["antigravity-native"])
 
-        guid_seed = f"{deck_name}_{cid}" if cid else f"{deck_name}_{q}"
+        guid_seed = f"{deck_name}_{cid}" if cid else f"{deck_name}_{p}"
         note_guid = genanki.guid_for(guid_seed)
 
-        if cloze_regex.search(q):
+        if cloze_regex.search(p):
             note = genanki.Note(
                 model=cloze_model,
-                fields=[q, a],
+                fields=[p, r],
                 tags=tags,
                 guid=note_guid
             )
@@ -1156,7 +1129,7 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
         else:
             note = genanki.Note(
                 model=basic_model,
-                fields=[q, a],
+                fields=[p, r],
                 tags=tags,
                 guid=note_guid
             )
@@ -1169,14 +1142,14 @@ def build_anki_deck(flashcards: list[dict], media_files: list[str], deck_name: s
     package.media_files = valid_media
     package.write_to_file(output_path)
 
-    log.info(f"      → Packaged {added_basic + added_cloze} card(s) ({added_basic} basic, {added_cloze} cloze).")
+    log.info(f"      → {added_basic + added_cloze} card(s) empacotado(s) ({added_basic} básicos, {added_cloze} cloze).")
     if valid_media:
-        log.info(f"      → Embedded {len(valid_media)} WebP image(s) and diagram(s).")
+        log.info(f"      → {len(valid_media)} imagem(ns) e diagrama(s) WebP embutido(s).")
 
     return added_basic, added_cloze
 
 # ---------------------------------------------------------------------------
-# 11. AUDIT REPORT GENERATOR (<output>_Audit_Report.md)
+# 11. GERADOR DO RELATÓRIO DE AUDITORIA (<output>_Relatorio_Auditoria.md)
 # ---------------------------------------------------------------------------
 def write_audit_report(
     report_path: str,
@@ -1197,73 +1170,70 @@ def write_audit_report(
     wrong_cards = sum(1 for c in cards if "status::wrong" in c.get("tags", []))
     correct_cards = sum(1 for c in cards if "status::correct" in c.get("tags", []))
 
-    md = f"""# 📊 Flashcard Architect v{VERSION} — Extraction & Audit Report
+    md = f"""# 📊 Relatório de Auditoria e Extração — Flashcard Architect v{VERSION}
 
-> **Source Material:** `{os.path.basename(input_file)}`  
-> **Execution Timestamp:** `{now_str}`  
-> **Generated Package (.apkg):** `{os.path.basename(output_apkg)}`  
-> **Target Anki Deck:** `{deck_name}`  
-> **Inference Engine:** Native Antigravity CLI / Host Agent (`{DEFAULT_MODEL}`)
+> **Documento Fonte:** `{os.path.basename(input_file)}`  
+> **Data de Execução:** `{now_str}`  
+> **Pacote Anki Gerado:** `{os.path.basename(output_apkg)}`  
+> **Baralho no Anki:** `{deck_name}`  
+> **Motor de Inferência:** Native `agy` (`{DEFAULT_MODEL}` / `--effort {DEFAULT_EFFORT}`)
 
 ---
 
-## 📈 1. Executive Summary & Global Metrics
+## 📈 1. Resumo Executivo e Métricas Globais
 
-| Metric | Value | Technical Details |
+| Métrica | Valor | Observações Técnicas |
 | :--- | :--- | :--- |
-| **Pages / Sections Processed** | `{stats.get('total_pages', 0)}` | Vectorized text extraction via PyMuPDF |
-| **Questions Detected in Document** | `{stats.get('total_questions_detected', 0)}` | Tracked via contextual regex & global sequence indexing |
-| **Questions Identified as Incorrect (Wrong)** | `{stats.get('wrong_questions', 0)}` | Detected via failure patterns & negative status markings |
-| **Questions Identified as Correct** | `{stats.get('correct_questions', 0)}` | Detected via passing patterns & positive answer keys |
-| **Diagrams / Topologies Mapped (Y0)** | `{stats.get('diagrams_mapped', 0)}` | Geometrically aligned by vertical coordinate to the question |
-| **Atomic Flashcards Created** | `{len(cards)}` | `{basic_count}` Basic Cards + `{cloze_count}` Cloze Deletion Cards |
-| **Cards Tagged `status::wrong`** | `{wrong_cards}` | High-priority deficit review deck |
-| **Cards Tagged `status::correct`** | `{correct_cards}` | Mastery consolidation cards |
+| **Páginas / Seções Processadas** | `{stats.get('total_pages', 0)}` | Leitura vetorial via PyMuPDF |
+| **Questões Detectadas no Documento** | `{stats.get('total_questions_detected', 0)}` | Rastreamento por regex contextual e indexação |
+| **Questões Identificadas como Incorretas (Wrong)** | `{stats.get('wrong_questions', 0)}` | Detectadas via padrões de erro e marcações |
+| **Questões Identificadas como Corretas** | `{stats.get('correct_questions', 0)}` | Detectadas via gabaritos de aprovação |
+| **Diagramas / Imagens Mapeados (Y0)** | `{stats.get('diagrams_mapped', 0)}` | Alinhados pela coordenada vertical da questão |
+| **Flashcards Atômicos Criados** | `{len(cards)}` | `{basic_count}` Cartões Básicos + `{cloze_count}` Cartões Cloze |
+| **Cards com Tag `status::wrong`** | `{wrong_cards}` | Foco prioritário de revisão e auditoria |
+| **Cards com Tag `status::correct`** | `{correct_cards}` | Fixação e reforço positivo |
 
 ---
 
-## ⚙️ 2. Active Provisioning Configuration
+## ⚙️ 2. Configurações de Provisionamento Aplicadas
 
-- **Content Fidelity Mode:** `{mode.upper()}`
-- **Question Filter:** `{filter_mode.upper()}`
-- **Language Mode:** `{lang.upper()}`
-- **Density Level:** `{density.upper()}`
-- **Embedded WebP Media:** `{media_count}` normalized files in package
+- **Modo de Fidelidade:** `{mode.upper()}`
+- **Filtro de Questões:** `{filter_mode.upper()}`
+- **Preservação de Idioma:** `{lang.upper()}`
+- **Densidade:** `{density.upper()}`
+- **Mídias Embutidas no .apkg:** `{media_count}` arquivos WebP normalizados
 
 ---
 
-## 📋 3. Sample Generated Flashcards
+## 📋 3. Amostra de Flashcards Gerados
 
 """
     for idx, c in enumerate(cards[:5], 1):
-        q_text = c.get("question") or c.get("pergunta", "")
-        clean_q = re.sub(r"<[^>]+>", " ", q_text).strip()
-        cid = c.get("concept_id") or c.get("id_conceito") or f"card_{idx}"
+        clean_p = re.sub(r"<[^>]+>", " ", c["pergunta"]).strip()
         tags_str = ", ".join(f"`{t}`" for t in c.get("tags", []))
-        sug_deck = c.get("suggested_deck") or deck_name
-        md += f"### Card #{idx} — `{cid}`\n"
-        md += f"- **Prompt (Front):** {clean_q}\n"
+        md += f"### Card #{idx} — `{c.get('id_conceito', 'card_' + str(idx))}`\n"
+        md += f"- **Pergunta (Frente):** {clean_p}\n"
         md += f"- **Tags:** {tags_str}\n"
-        md += f"- **Suggested Deck:** `{sug_deck}`\n\n"
+        md += f"- **Baralho Sugerido:** `{c.get('suggested_deck', deck_name)}`\n\n"
 
     md += """---
 
-## 💡 4. Next Steps in Anki with FSRS
+## 💡 4. Próximos Passos no Anki com FSRS
 
-1. Open Anki desktop or AnkiMobile and import the `.apkg` file.
-2. In the deck options, verify that **FSRS (Free Spaced Repetition Scheduler)** is enabled.
-3. Use the search filter `tag:status::wrong` in Anki Browse to create a **Filtered Deck** dedicated exclusively to overcoming your practice exam errors.
+1. Abra o Anki desktop ou AnkiMobile e dê duplo-clique no arquivo `.apkg`.
+2. Nas opções do baralho, certifique-se de que o **FSRS (Free Spaced Repetition Scheduler)** está ativado.
+3. Utilize a busca `tag:status::wrong` no Painel do Anki caso queira criar um **Baralho Filtrado (Filtered Deck)** focado exclusivamente na superação dos seus erros de simulado.
 """
 
     try:
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(md)
-        log.info(f"      → Audit Report generated: {report_path}")
+        log.info(f"      → Relatório de Auditoria gerado: {report_path}")
     except Exception as e:
-        log.warning(f"  ⚠ Could not write audit report: {e}")
+        log.warning(f"  ⚠ Não foi possível gravar relatório de auditoria: {e}")
 
 # ---------------------------------------------------------------------------
-# 12. CORE PIPELINE & RUNNER
+# 12. PIPELINE PRINCIPAL E CLI
 # ---------------------------------------------------------------------------
 def run_pipeline(
     input_file: str,
@@ -1284,23 +1254,23 @@ def run_pipeline(
 ) -> None:
     base_name = os.path.splitext(os.path.basename(input_file))[0]
 
-    # 1. Extraction
-    print(f"\n[1/3] Processing source material: {input_file} (Media={'Enabled (Y0)' if use_media else 'Disabled/Turbo'})")
+    # 1. Extração
+    print(f"\n[1/3] Processando material: {input_file} (Imagens={'Ativado (Y0)' if use_media else 'Desativado/Turbo'})")
     pages, media, stats = extract_content(input_file, use_media=use_media, attach_dir=attachments, filter_mode=filter_mode)
     total_chars = sum(len(p) for p in pages)
-    print(f"      → {len(pages)} block(s) | {len(media)} diagram(s) | ~{total_chars:,} characters")
+    print(f"      → {len(pages)} bloco(s) | {len(media)} diagrama(s) | ~{total_chars:,} caracteres")
 
-    # 2. Card Generation
+    # 2. Geração de Flashcards
     cards = []
     suggested_deck = ""
     is_json = input_file.lower().endswith(".json") or no_ai
 
     if is_json:
-        print(f"\n[2/3] Loading pre-structured flashcards (direct packaging mode)...")
+        print(f"\n[2/3] Carregando flashcards pré-estruturados (modo direto)...")
         raw_text = "\n".join(pages)
         cards, suggested_deck = parse_and_validate_cards(raw_text)
     else:
-        print(f"\n[2/3] Generating flashcards via Antigravity CLI ({model} / {effort} / mode: {mode} / filter: {filter_mode})...")
+        print(f"\n[2/3] Gerando flashcards com Antigravity CLI ({model} / {effort} / modo: {mode} / filtro: {filter_mode})...")
         master_prompt = build_master_prompt(
             mode=mode,
             density=density,
@@ -1313,28 +1283,28 @@ def run_pipeline(
         cards, suggested_deck = generate_flashcards_antigravity(chunks, master_prompt, model=model, effort=effort)
 
     if not cards:
-        log.error("\n[ERROR] No valid flashcards were generated or parsed.")
+        log.error("\n[ERRO] Nenhum flashcard foi gerado ou validado.")
         return
 
-    # Intelligent taxonomy naming
+    # Taxonomia automática: define o nome do deck inteligente
     final_deck_name = deck
-    if not final_deck_name or final_deck_name in ["Study::Flashcard_Architect", "Meu Baralho Antigravity"]:
+    if not final_deck_name or final_deck_name == "Meu Baralho Antigravity":
         if suggested_deck:
             final_deck_name = suggested_deck
         else:
             clean_title = re.sub(r"[_\-\.]+", " ", base_name).title()
-            final_deck_name = f"Study::{clean_title}"
+            final_deck_name = f"Estudos::{clean_title}"
 
     if not output:
         slug = re.sub(r"[^\w\s-]", "", final_deck_name.replace("::", "_")).strip().replace(" ", "_")
         output = f"{slug}.apkg"
 
-    # 3. Packaging
-    print(f"\n[3/3] Building Anki package: '{final_deck_name}' -> {output}")
+    # 3. Empacotamento
+    print(f"\n[3/3] Montando pacote Anki: '{final_deck_name}' -> {output}")
     basic_count, cloze_count = build_anki_deck(cards, media, final_deck_name, output)
 
-    # 4. Audit Report
-    report_file = os.path.splitext(output)[0] + "_Audit_Report.md"
+    # 4. Relatório de Auditoria
+    report_file = os.path.splitext(output)[0] + "_Relatorio_Auditoria.md"
     if generate_report:
         write_audit_report(
             report_path=report_file,
@@ -1353,116 +1323,67 @@ def run_pipeline(
         )
 
     print(f"\n{'═'*64}")
-    print(f"  ✅ Anki Deck v{VERSION} Successfully Built!")
-    print(f"  📦 Package (.apkg)  : {output}")
-    print(f"  📊 Audit Report     : {report_file}")
-    print(f"  🃏 Total Cards      : {len(cards)} ({basic_count} basic, {cloze_count} cloze)")
-    print(f"  🖼️  WebP Diagrams   : {len(media)} anchored via Y0")
-    print(f"  📂 Anki Deck Name   : {final_deck_name}")
-    print(f"  🎯 Mode / Filter    : {mode.upper()} | {filter_mode.upper()} | Lang: {lang.upper()}")
+    print(f"  ✅ Baralho Anki v{VERSION} gerado com sucesso!")
+    print(f"  📦 Arquivo .apkg    : {output}")
+    print(f"  📊 Relatório Audit  : {report_file}")
+    print(f"  🃏 Total de cards   : {len(cards)} ({basic_count} básicos, {cloze_count} cloze)")
+    print(f"  🖼️  Diagramas WebP  : {len(media)} vinculados por Y0")
+    print(f"  📂 Baralho Anki     : {final_deck_name}")
+    print(f"  🎯 Modo / Filtro    : {mode.upper()} | {filter_mode.upper()} | Idioma: {lang.upper()}")
     print(f"{'═'*64}\n")
 
-    # Preview 2 sample cards for immediate validation
-    print("👀 Flashcard Sample Preview:")
+    # Prévia de 2 cartões para validação
+    print("👀 Prévia de Cartões Gerados:")
     for i, c in enumerate(cards[:2], 1):
-        q_text = c.get("question") or c.get("pergunta", "")
-        a_text = c.get("answer") or c.get("resposta", "")
-        clean_q = re.sub(r"<[^>]+>", "", q_text).strip()
-        clean_a = re.sub(r"<[^>]+>", "", a_text).strip()
-        print(f"  [{i}] Front : {clean_q[:110]}...")
-        print(f"      Back  : {clean_a[:130]}...\n")
+        clean_p = re.sub(r"<[^>]+>", "", c["pergunta"]).strip()
+        clean_r = re.sub(r"<[^>]+>", "", c["resposta"]).strip()
+        print(f"  [{i}] Frente: {clean_p[:110]}...")
+        print(f"      Verso : {clean_r[:130]}...\n")
 
 def main():
     parser = argparse.ArgumentParser(
         prog="anki_generator",
-        description=f"Flashcard Architect v{VERSION} — Automated Anki Deck Architect with Spatial Y0 Anchoring, Exam Auditing, and 5-Axis Triage.",
-        epilog="Examples:\n  python anki_generator.py --input exam.pdf --extract-only\n  python anki_generator.py --input cards.json --no-ai --deck 'Study::Cisco'\n  python anki_generator.py --input exam.pdf --mode strict --filter wrong --lang en",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description=f"Flashcard Architect v{VERSION} — Pipeline com Ancoragem Y0, Filtros de Simulado e Wizard 5-Eixos.",
+        epilog="Exemplo: python anki_generator.py --input simulado.pdf --mode strict --filter wrong --lang keep"
     )
-    parser.add_argument("--input", "-i", default=None, help="Path to source document (.pdf, .md, .docx, .txt, .json)")
-    parser.add_argument("--deck", "-d", default="Study::Flashcard_Architect", help="Target Anki deck name (hierarchical with ::)")
-    parser.add_argument("--output", "-o", default=None, help="Output .apkg package path")
-    parser.add_argument("--mode", "-M", choices=["curated", "strict", "exam"], default=None, help="Content fidelity mode: curated (80/20), strict (verbatim), exam (error audit)")
-    parser.add_argument("--media", action="store_true", default=None, help="Force enable media extraction with Y0 geometric anchoring")
-    parser.add_argument("--no-media", action="store_true", default=False, help="Force disable media extraction (Turbo Text-Only Mode)")
-    parser.add_argument("--filter", "-F", choices=["all", "wrong", "correct"], default=None, help="Exam question filter: all (entire doc), wrong (incorrect only), correct (passed only)")
-    parser.add_argument("--lang", "-L", choices=["en", "keep", "pt"], default=None, help="Language mode: en (English default), keep (bilingual source preservation), pt (Portuguese)")
-    parser.add_argument("--density", "-D", choices=["essential", "high"], default=None, help="Card generation density: essential (1-2/page) or high (3-6/page)")
-    parser.add_argument("--style", "-S", choices=["qa", "hybrid"], default=None, help="Card format: qa (classic Q&A) or hybrid (Q&A + Cloze deletions)")
-    parser.add_argument("--attachments", "-a", default=None, help="Directory for extra visual attachments")
-    parser.add_argument("--model", "-m", default=DEFAULT_MODEL, help=f"Antigravity CLI model (default: {DEFAULT_MODEL})")
-    parser.add_argument("--effort", "-e", default=DEFAULT_EFFORT, choices=["low", "medium", "high", "xhigh", "max"], help=f"Reasoning effort level (default: {DEFAULT_EFFORT})")
-    parser.add_argument("--chunk-size", "-c", type=int, default=10, help="Pages/sections per batch (default: 10)")
-    parser.add_argument("--extract-only", action="store_true", help="Extract text and anchor WebP diagrams without calling AI, writing to --extracted-output")
-    parser.add_argument("--extracted-output", default=None, help="Output file path for structured extracted text (default: <input>_extracted.txt)")
-    parser.add_argument("--no-report", action="store_true", help="Skip generating the Markdown audit report")
-    parser.add_argument("--auto-install", action="store_true", help="Automatically install any missing python dependencies via pip")
-    parser.add_argument("--non-interactive", "-y", action="store_true", help="Skip interactive wizard using CLI flags/defaults")
-    parser.add_argument("--no-ai", "--offline", action="store_true", help="Directly package a pre-structured .json file without AI inference")
+    parser.add_argument("--input", "-i", default=None, help="Caminho do arquivo fonte (.pdf, .md, .docx, .txt, .json)")
+    parser.add_argument("--deck", "-d", default="Meu Baralho Antigravity", help="Nome do baralho no Anki (suporta ::)")
+    parser.add_argument("--output", "-o", default=None, help="Caminho do arquivo .apkg de saída")
+    parser.add_argument("--mode", "-M", choices=["curated", "strict", "exam"], default=None, help="Modo de fidelidade: curated (80/20), strict (literal) ou exam (erros)")
+    parser.add_argument("--media", action="store_true", default=None, help="Força ativação da extração de imagens com ancoragem Y0")
+    parser.add_argument("--no-media", action="store_true", default=False, help="Força desativação da extração de imagens (Modo Turbo)")
+    parser.add_argument("--filter", "-F", choices=["all", "wrong", "correct"], default=None, help="Filtro de questões: all (todas), wrong (somente erros) ou correct (acertos)")
+    parser.add_argument("--lang", "-L", choices=["keep", "pt", "en"], default=None, help="Preservação de idioma: keep (bilíngue original), pt (português) ou en (inglês)")
+    parser.add_argument("--density", "-D", choices=["essential", "high"], default=None, help="Densidade dos cartões: essential ou high")
+    parser.add_argument("--style", "-S", choices=["qa", "hybrid"], default=None, help="Estilo dos cartões: qa ou hybrid (com Cloze)")
+    parser.add_argument("--attachments", "-a", default=None, help="Pasta de anexos extras de imagem")
+    parser.add_argument("--model", "-m", default=DEFAULT_MODEL, help=f"Modelo do Antigravity CLI (padrão: {DEFAULT_MODEL})")
+    parser.add_argument("--effort", "-e", default=DEFAULT_EFFORT, choices=["low", "medium", "high", "xhigh", "max"], help=f"Nível de esforço (padrão: {DEFAULT_EFFORT})")
+    parser.add_argument("--chunk-size", "-c", type=int, default=10, help="Páginas/seções por lote (padrão: 10)")
+    parser.add_argument("--no-report", action="store_true", help="Não gera o relatório de auditoria em markdown")
+    parser.add_argument("--non-interactive", "-y", action="store_true", help="Pula o Wizard interativo usando padrões/flags")
+    parser.add_argument("--no-ai", "--offline", action="store_true", help="Empacota diretamente um arquivo .json sem chamar IA")
     parser.add_argument("--version", "-v", action="version", version=f"Flashcard Architect v{VERSION}")
 
     args = parser.parse_args()
 
-    # Verify or provision dependencies
-    check_or_install_dependencies(auto_install=args.auto_install)
-
-    # Auto-discover file if --input is omitted
+    # Auto-descoberta de arquivo se --input for omitido
     target_file = args.input
     if not target_file:
         candidates = []
         for ext in ["*.pdf", "*.md", "*.docx", "*.txt", "*.json"]:
             for f in glob.glob(ext):
                 fl = f.lower()
-                if not (
-                    fl.startswith("requirements") or
-                    fl.startswith("readme") or
-                    fl.startswith("guia_mestre") or
-                    fl.endswith("_audit_report.md") or
-                    fl.endswith("_relatorio_auditoria.md") or
-                    fl.endswith("_extracted.txt")
-                ):
+                if not (fl.startswith("requirements") or fl.startswith("readme") or fl.startswith("guia_mestre") or fl.endswith("_relatorio_auditoria.md")):
                     candidates.append(f)
         if candidates:
             target_file = candidates[0]
-            log.info(f"[Auto-Discovery] Selected source file: {target_file}")
+            log.info(f"[Auto-Descoberta] Arquivo selecionado: {target_file}")
         else:
-            log.error("[ERROR] No input file specified and no valid source document found in current directory.")
+            log.error("[ERRO] Nenhum arquivo especificado e nenhum documento encontrado na pasta atual.")
             sys.exit(1)
 
-    # Handle --extract-only for Universal Multi-Agent Host Support
-    if args.extract_only:
-        extracted_output = args.extracted_output or f"{os.path.splitext(target_file)[0]}_extracted.txt"
-        use_media = not args.no_media if args.no_media else True
-        if args.media is not None:
-            use_media = args.media
-
-        print(f"\n[Extraction Mode] Processing material: {target_file} (Media={'Enabled (Y0)' if use_media else 'Disabled/Turbo'})")
-        pages, media, stats = extract_content(target_file, use_media=use_media, attach_dir=args.attachments, filter_mode=args.filter or "all")
-        total_chars = sum(len(p) for p in pages)
-
-        combined_text = "\n\n".join(pages)
-        with open(extracted_output, "w", encoding="utf-8") as f:
-            f.write(combined_text)
-
-        summary = {
-            "status": "success",
-            "input_file": target_file,
-            "extracted_output": extracted_output,
-            "total_pages": stats.get("total_pages", len(pages)),
-            "total_characters": total_chars,
-            "diagrams_mapped": len(media),
-            "total_questions_detected": stats.get("total_questions_detected", 0),
-            "wrong_questions": stats.get("wrong_questions", 0),
-            "correct_questions": stats.get("correct_questions", 0),
-        }
-
-        print(f"      → Saved structured text to: {extracted_output}")
-        print(f"      → Total Pages: {summary['total_pages']} | Total Chars: {total_chars:,} | Diagrams: {len(media)}")
-        print(f"      → Questions Detected: {summary['total_questions_detected']} (Wrong: {summary['wrong_questions']}, Correct: {summary['correct_questions']})")
-        print("\n" + json.dumps(summary, indent=2))
-        sys.exit(0)
-
-    # Run Interactive Wizard if needed
+    # Executa Wizard Interativo caso necessário
     args = run_interactive_wizard(args)
 
     run_pipeline(

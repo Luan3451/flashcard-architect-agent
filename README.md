@@ -1,181 +1,150 @@
-# 🧠 Flashcard Architect (`v3.2.0` — Multi-Agent Commercial Edition)
+# 🧠 Flashcard Architect Agent (`v3.2.0` — Antigravity Native Edition)
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/Luan3451/flashcard-architect-agent-Agents.io-)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python: >=3.10](https://img.shields.io/badge/python-3.10%2B-brightgreen.svg)](https://www.python.org/)
-[![Anki FSRS: Compatible](https://img.shields.io/badge/Anki-FSRS%20Optimized-success.svg)](https://apps.ankiweb.net/)
-[![Platform: Claude Code | Cursor | Copilot | Antigravity](https://img.shields.io/badge/agents-Universal%20Support-orange.svg)](https://agensi.io)
-
-> **Enterprise-grade automated Anki deck architect (`.apkg`) with Y0 geometric diagram anchoring, practice exam error auditing, dual Basic + Cloze model routing, and native FSRS optimization for PDF, DOCX, Markdown, and TXT.**
+> **Agente Especialista, Skill e Motor Python para Geração Autônoma de Baralhos Anki (`.apkg`) Otimizados para o Algoritmo FSRS com Ancoragem Geométrica de Diagramas, Auditoria de Simulados e Zero Dependência de APIs Externas.**
 
 ---
 
-## 📌 Executive Summary
+## 📌 Visão Geral
 
-**Flashcard Architect v3.2.0** transforms complex study materials and certification practice exams (Cisco CCNA/CCNP, AWS, CompTIA, Bar exams, Medical boards) into high-retention Anki decks (`.apkg`) ready for immediate import into Anki Desktop, AnkiMobile, and AnkiDroid.
+O **Flashcard Architect Agent v3.2.0** automatiza a transformação de materiais de estudo (**PDF, Markdown, DOCX, TXT e JSON**) em pacotes `.apkg` prontos para importação no Anki Desktop, AnkiWeb e AnkiDroid/AnkiMobile. 
 
-Designed for international commercial distribution on **Agensi.io**, Flashcard Architect works across all modern AI coding harnesses (**Claude Code, Cursor, GitHub Copilot, Windsurf**) and operates natively in **Google Antigravity** without requiring third-party API keys.
+Operando **100% nativamente no ecossistema Google Antigravity** (`agy` CLI, Antigravity IDE e Antigravity Desktop APP) com o modelo **Gemini 3.8 Flash (High Reasoning Effort)**, o projeto dispensa chaves pagas (`GEMINI_API_KEY`) e inclui inovações arquiteturais desenvolvidas para cenários reais de alta densidade (como simulados de certificações de TI, OAB e concursos):
+
+1. **Ancoragem Geométrica de Diagramas (Y0)**: Lê a coordenada vertical (`bbox.y0`) de cada imagem e bloco de texto via PyMuPDF, posicionando o diagrama diretamente abaixo da questão correta (sem acúmulo no rodapé).
+2. **Indexação Sequencial Global & Prefixo de Bateria**: Previne colisões de contexto em simulados com seções reiniciadas (Q1–Q18, Q1–Q24) atribuindo o identificador `[Pág. X | QY (Global #Z)]`.
+3. **Filtro de Simulado e Auto-Tagging de Status**: Identifica automaticamente questões incorretas (`status::wrong`) e corretas (`status::correct`), permitindo gerar cartões apenas dos seus erros via `--filter wrong`.
+4. **Relatório Analítico de Auditoria**: Gera automaticamente o arquivo `<output>_Relatorio_Auditoria.md` com métricas consolidadas de acertos, erros e diagramas mapeados.
+5. **Preservação de Idioma Bilíngue (`--lang keep`)**: Mantém 100% das questões, alternativas e saídas de console no idioma oficial do exame (ex: Inglês da Cisco/AWS) enquanto entrega explicações detalhadas em Português no verso.
+6. **Wizard Interativo de 5 Eixos**: Triagem rápida pré-voo respondida com Enter (padrões) ou em linha única (`1, 1, 1, 1, 1`).
 
 ---
 
-## 🔬 Core Architectural Innovations
+## 📂 Estrutura do Repositório
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                   FLASHCARD ARCHITECT PIPELINE (v3.2.0)                │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │
-      ┌────────────────────────────┴─────────────────────────────┐
-      ▼                                                          ▼
-[PDF / DOCX / MD / TXT]                                   [Workflow A / B]
-      │                                                          │
-      ├─► Y0 Spatial Anchoring (bbox.y0 Top-to-Bottom Sorting)   │
-      ├─► Content-Addressed WebP Storage (SHA-256 Deduplication) │
-      ├─► Canonical Question Indexing: [Page X | Question Y]     │
-      ├─► Exam Outcome Detection: status::wrong / status::correct│
-      │                                                          ▼
-      ▼                                                 [LLM Cognitive Engine]
-[anki_media/*.webp]                                      (Atomicity & Rationale)
-      │                                                          │
-      └────────────────────────────┬─────────────────────────────┘
-                                   ▼
-             [Dual Model GenAnki: Basic + Cloze Deletions]
-                                   │
-      ┌────────────────────────────┴─────────────────────────────┐
-      ▼                                                          ▼
-[Compiled .apkg Deck with Native Dark Mode]          [<output>_Audit_Report.md]
+flashcard-architect-agent/
+├── .gitignore                        # Proteção contra mídias e .apkg temporários
+├── README.md                         # Documentação oficial e passo a passo
+├── plugin.json                       # Manifesto v3.2.0 com permissões filesystem e shell
+├── prompt_agente.txt                 # Matriz de Prompts Mestres (Curadoria, Literal e Erros)
+├── agents/
+│   └── flashcard-architect.md        # Agente @flashcard-architect com triagem de 5 eixos
+├── skills/
+│   └── flashcard-architect/
+│       └── SKILL.md                  # Skill autônoma para Antigravity IDE e CLI
+└── scripts/
+    └── anki_generator.py             # Motor Python v3.2.0 (Extração Y0, Auditoria, IA e GenAnki)
 ```
-
-### 1. Spatial Geometric Diagram Anchoring (Y0 Coordinate)
-Legacy extractors dump all page images into a flat footer list, causing the LLM to hallucinate which question a network topology belongs to on multi-question pages. Flashcard Architect reads the vertical coordinate (`bbox.y0`) of every text block and bitmap/vector drawing via PyMuPDF, ordering elements sequentially from top to bottom. Images appear in the extracted stream directly below the question prompt they illustrate.
-
-### 2. Global Sequential Indexing (`[Page X | Question Y (Global #Z)]`)
-Multi-part certification exams frequently reset question numbers (e.g., Section 1: Q1–Q20; Section 2: Q1–Q25). Flashcard Architect injects a unique canonical prefix, preventing context collisions in LLM sliding windows and ensuring deterministic note GUIDs.
-
-### 3. Practice Exam Outcome Auditing & Auto-Tagging
-The engine automatically detects pass/fail patterns and status markings, applying `status::wrong` or `status::correct` tags to generated cards. Use `--filter wrong` to isolate learning deficits into a surgical remediation deck.
-
-### 4. Automated Markdown Audit Report (`<output>_Audit_Report.md`)
-Every run compiles an executive audit report detailing question detection, error percentages, diagram counts, and step-by-step instructions for creating Anki Filtered Decks.
-
-### 5. Content-Addressed WebP Media Storage
-Visual assets are normalized, filtered to eliminate decorative banners, converted to WebP (quality 85), and stored using content hash identifiers (`ag_{hash[:12]}.webp`), eliminating media collisions inside Anki's unified `collection.media` folder.
 
 ---
 
-## ⚡ 5-Axis Pre-Flight Triage Wizard
+## 🚀 Passo a Passo Completo de Instalação e Preparação
 
-When executed without explicit CLI flags, Flashcard Architect presents an interactive 5-axis questionnaire. Users can press **Enter** to accept recommended defaults or reply in a single line (e.g., `1, 1, 2, 1, 1`):
+### Passo 1: Pré-requisitos do Sistema
+1. **Python 3.10 ou superior** instalado (`python --version`).
+2. **Google Antigravity CLI (`agy`)** instalado e autenticado no ambiente:
+   ```bash
+   agy --version
+   ```
 
-| Axis | Option 1 (Default) | Option 2 | Option 3 |
-| :--- | :--- | :--- | :--- |
-| **1. Content Fidelity** | **Curated 80/20 (`curated`)**<br>High-yield atomic synthesis | **Strict Literal (`strict`)**<br>Verbatim prompts & options | **Exam Traps (`exam`)**<br>Diagnostic distractor analysis |
-| **2. Media Extraction** | **Enabled (`--media`)**<br>Y0 spatial WebP extraction | **Turbo Mode (`--no-media`)**<br>Text-only (70% faster) | — |
-| **3. Question Filter** | **All Questions (`all`)**<br>Full coverage with tagging | **Errors Only (`wrong`)**<br>Surgical deficit remediation | **Correct Only (`correct`)**<br>Mastery reinforcement |
-| **4. Language Mode** | **English (`en`)**<br>Standard technical English | **Bilingual Keep (`keep`)**<br>English prompt / PT rationale | **Portuguese (`pt`)**<br>Full Portuguese translation |
-| **5. Card Format & Density** | **Exhaustive Q&A (`qa`)**<br>3 to 6 cards per section | **Hybrid Mode (`hybrid`)**<br>Q&A + Cloze (`{{c1::...}}`) | **Essential (`essential`)**<br>1 to 2 core cards |
+### Passo 2: Clonar o Repositório
+```bash
+git clone https://github.com/Luan3451/flashcard-architect-agent.git
+cd flashcard-architect-agent
+```
+
+### Passo 3: Instalar o Plugin no Antigravity
+Para disponibilizar o agente `@flashcard-architect` e a skill globalmente no seu Antigravity IDE/APP:
+```bash
+agy plugin install .
+```
+
+### Passo 4: Instalação de Dependências Python
+O script `scripts/anki_generator.py` possui **Auto-Bootstrap**: na primeira execução, ele instala automaticamente as bibliotecas ausentes. Caso prefira provisionar manualmente:
+```bash
+pip install genanki pymupdf python-docx Pillow
+```
 
 ---
 
-## 🚀 Dual Execution Workflows
+## ⚡ Guia Rápido de Uso
 
-### Workflow A: Universal Host-Agent Mode (Claude Code, Cursor, Copilot, Windsurf)
-
-AI coding assistants can leverage Flashcard Architect's decoupled pipeline without needing direct shell access to external inference binaries:
-
+### Opção A: Execução Interativa (Wizard 5-Eixos)
+Basta executar o script apontando para o seu material. O sistema apresenta o menu de 5 perguntas:
 ```bash
-# Step 1: Extract text and anchor visual diagrams
-python scripts/anki_generator.py \
-  --input "practice_exam.pdf" \
-  --extract-only \
-  --extracted-output "extracted_text.txt"
+python scripts/anki_generator.py --input simulado_ccna.pdf
 ```
+*(Você pode pressionar Enter para aceitar todas as recomendações ou digitar `1, 1, 2, 1, 1` para focar somente em erros de simulado).*
 
-1. The agent inspects `extracted_text.txt` containing anchored diagrams (`[Image: ag_xxxx.webp]`) and question status tags (`[STATUS: INCORRECT / WRONG]`).
-2. The agent's LLM generates a clean JSON array adhering to `prompt_agente.txt` and writes it to `cards_payload.json`.
-3. The agent compiles the `.apkg` with all embedded media:
+### Opção B: Execução Zero-Touch (Automatizada por Linha de Comando)
 
-```bash
-# Step 2: Compile package and generate audit report
-python scripts/anki_generator.py \
-  --input "cards_payload.json" \
-  --no-ai \
-  --deck "Certifications::Cisco::CCNA_200_301" \
-  --output "CCNA_Study.apkg"
-```
-
-### Workflow B: Standalone Antigravity CLI Mode
-
-Environments with the Antigravity CLI (`agy`) can execute end-to-end autonomous generation with Gemini 3.8 Flash:
-
+#### 1. Simulado de TI com Foco Cirúrgico nos Erros (Inglês + Justificativa PT)
 ```bash
 python scripts/anki_generator.py \
-  --input "practice_exam.pdf" \
-  --deck "Certifications::AWS::Solutions_Architect" \
+  --input ccna_erros.pdf \
+  --deck "Certificacoes::Cisco::CCNA_200_301" \
   --mode strict \
   --filter wrong \
-  --lang en \
+  --lang keep \
   --media \
+  --non-interactive
+```
+
+#### 2. Resumo de Apostila Teórica (Modo Turbo Sem Imagens)
+```bash
+python scripts/anki_generator.py \
+  --input apostila_redes.pdf \
+  --deck "Redes::Fundamentos" \
+  --mode curated \
+  --no-media \
+  --density high \
+  --non-interactive
+```
+
+#### 3. Prova da OAB / Concurso Jurídico (Fidelidade Literal ao Texto)
+```bash
+python scripts/anki_generator.py \
+  --input prova_oab.pdf \
+  --deck "Direito::OAB_1a_Fase" \
+  --mode strict \
+  --lang pt \
   --non-interactive
 ```
 
 ---
 
-## 🛠️ CLI Reference Table (`--help`)
+## 📊 Relatório de Auditoria Gerado
 
-| Flag | Values | Default | Description |
+Ao final de cada execução com simulados, o gerador grava automaticamente um relatório no formato Markdown (`<output>_Relatorio_Auditoria.md`) contendo:
+- Total de páginas e questões detectadas
+- Contagem e percentual de questões com tag `status::wrong` vs `status::correct`
+- Diagramas e topologias ancoradas geometricamente por coordenada Y
+- Prévia de cartões e instruções de criação de Baralhos Filtrados no Anki com FSRS
+
+---
+
+## 🛠️ Opções Completas de Linha de Comando (`--help`)
+
+| Flag | Argumentos | Padrão | Descrição |
 | :--- | :--- | :--- | :--- |
-| `-i, --input` | File path | Auto-detect | Source document (`.pdf`, `.md`, `.docx`, `.txt`, `.json`) |
-| `-d, --deck` | String | `Study::Flashcard_Architect` | Target Anki deck name (supports `::` hierarchy) |
-| `-o, --output` | File path | `<deck>.apkg` | Output path for compiled `.apkg` package |
-| `-M, --mode` | `curated`, `strict`, `exam` | `curated` | Content treatment: 80/20, Verbatim, or Error Audit |
-| `--media` | Flag | Enabled | Force enable Y0 geometric image extraction |
-| `--no-media` | Flag | Disabled | Force disable image extraction (Turbo Mode) |
-| `-F, --filter` | `all`, `wrong`, `correct` | `all` | Filter questions: entire doc, failed only, or passed only |
-| `-L, --lang` | `en`, `keep`, `pt` | `en` | Language: English, Bilingual Keep, or Portuguese |
-| `-D, --density` | `essential`, `high` | `high` | Card density: 1-2 vs. 3-6 cards per section |
-| `-S, --style` | `qa`, `hybrid` | `qa` | Card template: classic Q&A or Hybrid with Cloze |
-| `--extract-only` | Flag | Disabled | Perform Step 1 extraction and exit (Host-Agent mode) |
-| `--extracted-output` | File path | `<input>_extracted.txt` | Target path for extracted structured text |
-| `--auto-install` | Flag | Disabled | Automatically install missing Python packages via pip |
-| `--no-report` | Flag | Disabled | Skip Markdown audit report generation |
-| `-y, --non-interactive` | Flag | Disabled | Skip interactive wizard using flags/defaults |
-| `--no-ai, --offline` | Flag | Disabled | Package pre-structured JSON directly without AI |
-| `-v, --version` | Flag | N/A | Print version number and exit |
+| `-i, --input` | Caminho do arquivo | Auto-detect | Arquivo `.pdf`, `.md`, `.docx`, `.txt`, `.json` |
+| `-d, --deck` | String | Estudos::... | Nome hierárquico do baralho no Anki (`::`) |
+| `-o, --output` | Caminho `.apkg` | `<deck>.apkg` | Caminho do pacote Anki exportado |
+| `-M, --mode` | `curated`, `strict`, `exam` | `curated` | Curadoria (80/20), Literal ou Foco em Pegadinhas |
+| `--media` | Flag booleana | Ativo | Ativa extração e ancoragem de imagens |
+| `--no-media` | Flag booleana | Inativo | Desativa motor de imagens (Modo Turbo) |
+| `-F, --filter` | `all`, `wrong`, `correct` | `all` | Filtro de simulado (todas, apenas erros ou acertos) |
+| `-L, --lang` | `keep`, `pt`, `en` | `keep` | Preservação bilíngue (`keep`), português ou inglês |
+| `-D, --density` | `essential`, `high` | `high` | Quantidade de cartões (1-2 vs 3-6 por página) |
+| `-S, --style` | `qa`, `hybrid` | `qa` | Formato Pergunta/Resposta clássico ou Híbrido com Cloze |
+| `-m, --model` | Nome do modelo | `gemini-3.8-flash-high` | Modelo do Antigravity CLI |
+| `-e, --effort` | `low`, `medium`, `high`, `xhigh` | `high` | Nível de esforço de raciocínio da inferência |
+| `-y, --non-interactive` | Flag booleana | Inativo | Pula o wizard usando flags/padrões |
+| `--no-report` | Flag booleana | Inativo | Não gera o arquivo `.md` de auditoria |
+| `-v, --version` | N/A | N/A | Exibe a versão do Flashcard Architect |
 
 ---
 
-## 📂 Repository Layout
+## 📄 Licença
 
-```text
-flashcard-architect-agent/
-├── .gitignore                        # Git exclusion rules allowing distribution zips
-├── LICENSE                           # MIT License
-├── README.md                         # Commercial international documentation
-├── SKILL.md                          # Agensi.io root skill specification
-├── plugin.json                       # Antigravity/Gemini plugin manifest v3.2.0
-├── prompt_agente.txt                 # Master prompt engineering matrix (English)
-├── agents/
-│   └── flashcard-architect.md        # Antigravity Agent definition with 5-axis wizard
-├── skills/
-│   └── flashcard-architect/
-│       └── SKILL.md                  # Backward-compatible mirrored skill
-└── scripts/
-    └── anki_generator.py             # Multi-agent Python core (Y0, WebP, GenAnki, Audit)
-```
-
----
-
-## 📦 Packaging for Agensi.io Marketplace
-
-To generate a clean submission package for the Agensi.io marketplace:
-
-```bash
-zip -r flashcard-architect-agensi.zip . -x "*.git*" -x "anki_media/*" -x "*.apkg" -x "*__pycache__*" -x "*.venv*"
-```
-
----
-
-## 📄 License
-
-Distributed under the **MIT License**. Created and maintained by **Luan3451**.
+Distribuído sob licença MIT. Criado por **Luan3451**.
