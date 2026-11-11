@@ -1,6 +1,6 @@
 # Aplicar a atualização no repositório
 
-O acesso do ChatGPT conseguiu ler o repositório, mas a tentativa de criar uma branch retornou `HTTP 403 Resource not accessible by integration`. Esta atualização foi preparada localmente; **não está no GitHub**.
+Estas instruções são uma alternativa para aplicar manualmente a atualização a partir de um ZIP. Se você já está usando a branch v4 do repositório, os arquivos já estão presentes; siga a instalação e a validação descritas no README.
 
 1. Baixe o ZIP desta conversa e extraia os arquivos.
 2. Abra um terminal no clone local de `Luan3451/flashcard-architect-agent`.

@@ -2,7 +2,7 @@
 
 **Atualização proposta** para [`Luan3451/flashcard-architect-agent`](https://github.com/Luan3451/flashcard-architect-agent). O motor é independente do serviço de IA e transforma PDF, Markdown, DOCX, TXT e JSON em `.apkg` Anki.
 
-Esta distribuição substitui o motor `scripts/anki_generator.py` v3 e mantém a estrutura de agente e skill, agora com triagem de 7 eixos. **Não foi publicada automaticamente no GitHub:** a integração rejeitou a criação da branch (403). Para aplicar: copie os arquivos do ZIP sobre os arquivos de mesmo nome no seu clone e use uma nova branch; veja `APLICAR.md`.
+Esta distribuição substitui o motor `scripts/anki_generator.py` v3 e mantém a estrutura de agente e skill, agora com triagem de 7 eixos. Para aplicação manual a partir de um ZIP, veja `APLICAR.md`.
 
 ## Instalação
 
