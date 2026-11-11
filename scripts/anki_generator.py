@@ -609,7 +609,8 @@ def wizard(args: argparse.Namespace) -> None:
 def run(args: argparse.Namespace) -> dict[str, Any]:
     wizard(args)
     source = Path(args.input).expanduser()
-    target = Path(args.output).expanduser() if args.output else Path.cwd() / f"{re.sub(r'[^\w-]+', '_', args.deck)}.apkg"
+    deck_filename = re.sub(r"[^\w-]+", "_", args.deck) + ".apkg"
+    target = Path(args.output).expanduser() if args.output else Path.cwd() / deck_filename
     preflight(source, target)
     if args.provider not in DEFAULT_MODELS:
         raise ValueError("Provedor inválido")
