@@ -1,15 +1,16 @@
-# API Keys e configurações sensíveis
+# Secrets
 .env
 *.env
 config.local.py
+*.pem
+*.key
 
-# Mídia gerada pelo script
+# Private study material / generated media
 anki_media/
-
-# Saídas geradas
+.flashcard_cache/
 *.apkg
-
-# Documentos de entrada (não versionar materiais pessoais)
+*.audit.json
+*.extraction.json
 *.pdf
 *.docx
 
@@ -25,15 +26,14 @@ build/
 venv/
 env/
 .eggs/
+.pytest_cache/
 
-# IDEs
+# IDEs / system
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# Sistema
 .DS_Store
 Thumbs.db
 Desktop.ini

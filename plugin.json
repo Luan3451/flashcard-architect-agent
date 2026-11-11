@@ -1,34 +1,18 @@
 {
   "name": "flashcard-architect",
-  "version": "3.2.0",
-  "description": "Agente e Skill oficial para geração autônoma de baralhos Anki (.apkg) otimizados para FSRS com extração posicional de diagramas e auditoria de simulados.",
+  "version": "4.0.0",
+  "description": "Motor PDF para Anki com provedores OpenAI, Anthropic, Antigravity e Claude Code, temas próprios, checkpoints e extração geométrica.",
   "author": "Luan3451",
-  "displayName": "Flashcard Architect (Zero-Touch v3.2.0)",
-  "agents": [
-    "agents/flashcard-architect.md"
-  ],
-  "skills": [
-    "skills/flashcard-architect/SKILL.md"
-  ],
+  "displayName": "Flashcard Architect Portable v4",
+  "agents": ["agents/flashcard-architect.md"],
+  "skills": ["skills/flashcard-architect/SKILL.md"],
   "suggestedPrompts": [
-    "Converta este simulado PDF em flashcards Anki com ancoragem geométrica de topologias e auditoria de erros",
-    "Gere o .apkg a partir do meu documento com foco nos conceitos mais cobrados e mídias WebP embutidas",
-    "Extraia apenas as questões incorretas deste simulado em flashcards com justificativas técnicas no Anki"
+    "Converta meu PDF em Anki .apkg, preservando imagens e coordenadas e usando o tema Atlas",
+    "Gere cartões com uma IA leve e checkpoints para retomar lotes longos",
+    "Prepare JSON para importar no Flashcard Architect usando ChatGPT ou Claude"
   ],
   "permissions": {
-    "filesystem": {
-      "read": true,
-      "write": true
-    },
-    "shell": {
-      "execute": true,
-      "allowlist": [
-        "python",
-        "python3",
-        "uv",
-        "pip",
-        "agy"
-      ]
-    }
+    "filesystem": {"read": true, "write": true},
+    "shell": {"execute": true, "allowlist": ["python", "python3", "uv", "agy", "claude"]}
   }
 }
