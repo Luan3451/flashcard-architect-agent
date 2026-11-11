@@ -1,7 +1,7 @@
 {
   "name": "flashcard-architect",
   "version": "4.0.0",
-  "description": "Motor PDF para Anki com provedores OpenAI, Anthropic, Antigravity e Claude Code, temas próprios, checkpoints e extração geométrica.",
+  "description": "Motor PDF para Anki com provedores OpenAI, Anthropic, Antigravity, Claude Code e Ollama local, temas próprios, checkpoints e extração geométrica.",
   "author": "Luan3451",
   "displayName": "Flashcard Architect Portable v4",
   "agents": ["agents/flashcard-architect.md"],

@@ -21,6 +21,7 @@ O fluxo possui **sete eixos** distintos: fidelidade, imagens, filtro de acertos,
 | Antigravity | `--provider agy` | `agy` autenticado e com sandbox |
 | OpenAI | `--provider openai` | Variável `OPENAI_API_KEY` |
 | Anthropic | `--provider anthropic` | Variável `ANTHROPIC_API_KEY` |
+| Ollama local | `--provider ollama --model qwen3:8b` | Ollama iniciado em 127.0.0.1:11434 e modelo baixado |
 | Claude Code | `--provider claude-cli` | CLI autenticado, sem ferramentas habilitadas |
 | ChatGPT/Claude web | `--extract-only` e `--no-ai --source-media material.pdf` | JSON de cartões salvo localmente |
 
@@ -29,3 +30,5 @@ Para imagens, o pipeline extrai bitmaps por ocorrência, grupos vetoriais render
 O formato de cartões é array JSON: `[{"id_conceito":"...", "pergunta":"...", "resposta":"...", "tags":["..."]}]`. As imagens são referenciadas por `<img src="fa_[hash].webp">` e só são anexadas se estiverem na lista de mídias extraídas.
 
 Após exportar, mostrar nome do arquivo, tema, número de cartões e mídias utilizadas; indicar que a fidelidade semântica de imagens deve ser validada visualmente no Anki.
+
+Recomendação de nuvem: Gemini 3.8 Flash no Antigravity com `--effort high`, confirmando o ID na conta (`gemini-3.8-flash-high` é o alias atual, não verificado). Recomendação local para RTX 4060 8 GB: Qwen3 8B via Ollama com `--chunk-chars 3000 --timeout 1200`. Não confunda CLI local com inferência local; `--effort` não se aplica ao Ollama. Consulte alternativas e limites de memória no README.
