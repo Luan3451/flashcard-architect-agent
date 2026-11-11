@@ -273,3 +273,68 @@ def test_extract_only_generates_web_chat_manifest(tmp_path):
     assert data['source'] == source.name
     assert data['stats']['pages'] == 1
     assert 'Question 1' in data['blocks'][0]
+
+
+def test_recommended_provider_defaults():
+    args = engine.parser().parse_args(['--input', 'material.pdf'])
+    assert args.provider == 'agy' and args.effort == 'high'
+    local = engine.parser().parse_args(['--input', 'material.pdf', '--provider', 'ollama'])
+    assert engine.DEFAULT_MODELS[local.provider] == 'qwen3:8b'
+
+
+@pytest.mark.parametrize('model,thinking', [('qwen3:8b', False), ('gemma3:12b', None)])
+def test_ollama_local_structured_output_without_api_key(monkeypatch, model, thinking):
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
+    requests = []
+    raw = json.dumps([{'id_conceito': 'dns_1', 'pergunta': 'O que é DNS?',
+                       'resposta': 'Sistema de nomes de domínio.', 'tags': ['redes']}])
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *args): return None
+        def read(self, limit):
+            return json.dumps({'message': {'content': raw}, 'done_reason': 'stop'}).encode()
+    def call(request, timeout):
+        requests.append((request, timeout))
+        return Response()
+    monkeypatch.setattr(engine, 'urlopen', call)
+    cards = engine.parse_cards(engine.invoke_model('ollama', model, 'high', 'Texto DNS', 1200), {})
+    assert len(cards) == 1 and cards[0]['id_conceito'] == 'dns_1'
+    request, timeout = requests[0]
+    assert request.full_url == 'http://127.0.0.1:11434/api/chat'
+    assert timeout == 1200 and not request.has_header('Authorization')
+    payload = json.loads(request.data)
+    assert payload['model'] == model and payload['stream'] is False
+    assert payload['format']['type'] == 'array'
+    assert payload['options']['num_ctx'] == 8192
+    assert payload['options']['temperature'] == 0.2
+    assert payload.get('think') is thinking
+    assert 'reasoning_effort' not in payload
+
+
+@pytest.mark.parametrize('response', [
+    {'message': {'content': ''}},
+    {'message': {'content': '[]'}, 'done_reason': 'length'},
+])
+def test_ollama_rejects_empty_or_truncated_output(monkeypatch, response):
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *args): return None
+        def read(self, limit): return json.dumps(response).encode()
+    monkeypatch.setattr(engine, 'urlopen', lambda *args, **kwargs: Response())
+    with pytest.raises(RuntimeError):
+        engine.invoke_model('ollama', 'qwen3:8b', 'high', 'texto', 60)
+
+
+@pytest.mark.parametrize('missing_model', [False, True])
+def test_ollama_errors_are_actionable_without_cloud_fallback(monkeypatch, missing_model):
+    calls = []
+    def fail(request, timeout):
+        calls.append(request.full_url)
+        if missing_model:
+            raise engine.HTTPError(request.full_url, 404, 'not found', {}, None)
+        raise engine.URLError('Connection refused')
+    monkeypatch.setattr(engine, 'urlopen', fail)
+    with pytest.raises(RuntimeError, match='ollama pull' if missing_model else 'ollama serve'):
+        engine.invoke_model('ollama', 'qwen3:8b', 'high', 'texto', 60)
+    assert calls == ['http://127.0.0.1:11434/api/chat']

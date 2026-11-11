@@ -23,6 +23,7 @@ Para OCR em PDFs digitalizados, instale adicionalmente `python -m pip install ra
 | Antigravity CLI | `agy` | `agy` autenticado | `gemini-3.8-flash-high` (ajuste via `--model`, se não existir) |
 | OpenAI API | `openai` | `OPENAI_API_KEY` | `gpt-5.4-mini` |
 | Anthropic Claude API | `anthropic` | `ANTHROPIC_API_KEY` | `claude-haiku-5-5` |
+| Ollama local | `ollama` | Ollama iniciado e modelo baixado | `qwen3:8b` (RTX 4060 8 GB) |
 | Claude Code CLI | `claude-cli` | `claude` autenticado | `haiku` |
 | ChatGPT/Claude no navegador | **offline JSON** | Nenhuma chave na execução local | Modelo escolhido pelo usuário no chat |
 
@@ -30,11 +31,41 @@ O serviço ChatGPT e a OpenAI API são produtos com credenciais/cobrança separa
 
 As chaves devem ser definidas como **variáveis de ambiente** na máquina, nunca colocadas no código, arquivos versionados ou linha de comando. Os provedores de API enviam os trechos do documento ao serviço escolhido; respeite a confidencialidade do material.
 
+### Recomendação de IA
+
+**Nuvem / Antigravity:** o perfil sugerido é Gemini 3.8 Flash com esforço **`high`**. O projeto mantém o identificador `gemini-3.8-flash-high` já utilizado, mas ele **não foi confirmado nem testado no catálogo do Antigravity**. Use `--model` com o identificador exato disponível na sua conta; o nome comercial e o ID podem ser diferentes. `--effort high` já é o padrão. Instalar a CLI no computador não torna o Gemini um modelo local.
+
+**Local / RTX 4060 de 8 GB:** comece com **Qwen3 8B via Ollama**, tag `qwen3:8b`, na quantização padrão do Ollama. É uma recomendação inicial para português e saída estruturada, não uma garantia de qualidade equivalente ao Gemini. O pipeline envia texto e marcadores das figuras; esses modelos não interpretam visualmente os diagramas neste fluxo.
+
+| Modelo local | Quando escolher | Memória de referência (aproximada) |
+| --- | --- | --- |
+| **`qwen3:8b` — padrão local** | Equilíbrio inicial entre qualidade e velocidade | RTX 4060 **8 GB**, preferencialmente 16 GB de RAM ou mais |
+| `gemma3:12b` | Alternativa para comparar fidelidade e português | 8 GB pode exigir uso parcial da RAM; prefira 12–16 GB de VRAM e 24–32 GB de RAM |
+| `qwen3:14b` | Buscar melhor qualidade em material técnico | Prefira 12–16 GB de VRAM (ex.: **4060 Ti 16 GB**) e 32 GB de RAM |
+| `qwen3:32b` | Equipamentos com mais memória; mais lento | Prefira 24 GB de VRAM e 48–64 GB de RAM, conforme contexto e quantização |
+
+RTX 4060 e RTX 4060 Ti são placas diferentes. Quantização, contexto, outros aplicativos e uso de CPU/RAM alteram o consumo: as faixas acima não garantem execução inteira na GPU. Sem GPU, o Ollama pode usar CPU, com maior latência. Os modelos locais sugeridos não foram comparados por benchmark neste projeto.
+
+Instale o [Ollama](https://ollama.com/download), inicie o aplicativo (ou `ollama serve`) e baixe apenas o modelo desejado:
+
+```bash
+ollama pull qwen3:8b
+python scripts/anki_generator.py --input material.pdf --provider ollama \
+  --model qwen3:8b --chunk-chars 3000 --timeout 1200 --theme atlas --non-interactive
+```
+
+O provedor local usa somente `http://127.0.0.1:11434/api/chat`, sem chave de API e sem fallback para nuvem. O download inicial do modelo requer internet; após o download, a inferência é local. O script não instala Ollama nem baixa modelos automaticamente.
+
+O perfil local solicita JSON estruturado, temperatura 0.2, contexto de 8192 tokens e até 4096 tokens de saída. Para Qwen3, desativa `thinking` para reservar o orçamento aos cartões. **`--effort high` não se aplica ao Ollama**; não representa a mesma configuração de raciocínio do Antigravity. Mantenha lotes pequenos (3000 caracteres) na RTX 4060. Para uma segunda revisão, acrescente `--verify-pass` (mais lento); confira perguntas e gabaritos com a fonte antes de estudar.
+
+Tags consultadas no [catálogo Qwen3](https://ollama.com/library/qwen3) e [Gemma 3](https://ollama.com/library/gemma3). Requer uma versão do Ollama com `/api/chat` e saída estruturada compatíveis.
+
 ### Exemplos
 
 ```bash
 # Antigravity CLI: usa modo sandbox, sem skip-permissions
-python scripts/anki_generator.py --input material.pdf --provider agy --theme atlas --non-interactive
+python scripts/anki_generator.py --input material.pdf --provider agy \
+  --model gemini-3.8-flash-high --effort high --theme atlas --non-interactive
 
 # OpenAI API: exige OPENAI_API_KEY no ambiente
 python scripts/anki_generator.py --input material.pdf --provider openai --model gpt-5.4-mini \
@@ -67,7 +98,7 @@ O assistente pergunta, nesta ordem:
 4. Idioma: original + explicação em PT, PT ou EN.
 5. Densidade: alta ou essencial.
 6. **Tema visual:** Studio Pro, Atlas Diagrams, Paper Study ou High Contrast.
-7. **Provedor de IA:** Antigravity, OpenAI, Anthropic ou Claude CLI.
+7. **Provedor de IA:** Antigravity, OpenAI, Anthropic, Claude CLI ou Ollama local.
 
 Os temas são implementações **originais** inspiradas apenas na possibilidade de personalização do projeto [`pranavdeshai/anki-prettify`](https://github.com/pranavdeshai/anki-prettify), sem reproduzir código ou ativos. Eles incluem layouts responsivos, suporte a imagens grandes, tipografia legível, tema noturno e cartões Basic/Cloze. O Atlas enfatiza diagramas amplos; o Studio é o padrão; Paper facilita leitura diurna e impressão; Contrast enfatiza acessibilidade. Não dependem de JavaScript nem de fontes remotas.
 
@@ -96,7 +127,7 @@ A suíte possui testes para sanitização de HTML, chunking sem sobreposição, 
 
 | Área | v3 | Atualização v4 |
 | --- | --- | --- |
-| LLM | Antigravity único | Antigravity, OpenAI, Anthropic, Claude CLI e JSON offline |
+| LLM | Antigravity único | Antigravity, OpenAI, Anthropic, Claude CLI, Ollama local e JSON offline |
 | Tema | CSS fixo | Quatro temas originais, opção no wizard |
 | Diagramas | Imagens baseadas em xref/Y0, WebP com perdas | Imagens por ocorrência, `bbox` 2D, WebP lossless, recortes vetoriais |
 | Confiabilidade | Timeout fixo, falha de lote ignorada | Timeout configurável, checkpoint, aborta se incompleto |
