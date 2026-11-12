@@ -338,3 +338,25 @@ def test_ollama_errors_are_actionable_without_cloud_fallback(monkeypatch, missin
     with pytest.raises(RuntimeError, match='ollama pull' if missing_model else 'ollama serve'):
         engine.invoke_model('ollama', 'qwen3:8b', 'high', 'texto', 60)
     assert calls == ['http://127.0.0.1:11434/api/chat']
+
+
+def test_review_only_roundtrip_and_no_package(tmp_path):
+    source = tmp_path / 'input.json'
+    source.write_text(json.dumps([{'id_conceito': 'dns_123', 'pergunta': 'DNS?', 'resposta': 'Nomes', 'tags': []}]))
+    target = tmp_path / 'review.apkg'
+    args = engine.parser().parse_args(['--input', str(source), '--output', str(target), '--no-ai', '--review-only', '--non-interactive'])
+    result = engine.run(args)
+    assert result['status'] == 'pending_review'
+    assert not target.exists()
+    data = json.loads(Path(result['review']).read_text())
+    assert engine.parse_cards(json.dumps(data), {})[0]['id_conceito'] == 'dns_123'
+
+
+def test_duplicate_ids_cannot_create_package(tmp_path):
+    cards = engine.parse_cards(json.dumps([
+        {'id_conceito': 'same_id', 'pergunta': 'DNS?', 'resposta': 'Nomes'},
+        {'id_conceito': 'same_id', 'pergunta': 'HTTP?', 'resposta': 'Web'}]), {})
+    target = tmp_path / 'duplicate.apkg'
+    with pytest.raises(ValueError, match='IDs de conceito'):
+        engine.write_apkg(cards, {}, 'Test', target, 'atlas')
+    assert not target.exists()
