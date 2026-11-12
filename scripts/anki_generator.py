@@ -32,7 +32,7 @@ try:
 except ImportError:  # python scripts/anki_generator.py
     from themes import THEMES, css_for_theme, note_model_id, templates
 
-VERSION = "4.0.0"
+VERSION = "4.1.0"
 log = logging.getLogger("flashcard-architect")
 DEFAULT_MODELS = {
     "agy": "gemini-3.8-flash-high",  # override if not available in your agy account
@@ -284,7 +284,14 @@ class CardHTMLSanitizer(HTMLParser):
 
     def handle_data(self, data: str) -> None:
         if not self.suppressed:
-            self.out.append(escape(data, quote=False))
+            # Anki sound syntax is executable media markup, even inside plain text.
+            def sound(match):
+                name = match.group(1)
+                if re.fullmatch(r"fa_audio_[0-9a-f]{20}\.wav", name) and name in self.allowed_media:
+                    self.refs.add(name)
+                    return match.group(0)
+                return ""
+            self.out.append(escape(re.sub(r"\[sound:([^\]\r\n]+)\]", sound, data), quote=False))
 
     def handle_entityref(self, name: str) -> None:
         if not self.suppressed:
@@ -647,6 +654,10 @@ def wizard(args: argparse.Namespace) -> None:
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     wizard(args)
+    if args.tts_voice and not args.experimental_audio:
+        raise ValueError("Narração exige --experimental-audio")
+    if args.tts_voice and (args.extract_only or args.review_only):
+        raise ValueError("Revise/extraia primeiro; use TTS somente ao exportar .apkg")
     source = Path(args.input).expanduser()
     deck_filename = re.sub(r"[^\w-]+", "_", args.deck) + ".apkg"
     target = Path(args.output).expanduser() if args.output else Path.cwd() / deck_filename
@@ -701,6 +712,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         review_path.parent.mkdir(parents=True, exist_ok=True)
         review_path.write_text(json.dumps(cards, ensure_ascii=False, indent=2, default=list), encoding="utf-8")
         return {"review": str(review_path), "cards": len(cards), "status": "pending_review"}
+    if args.tts_voice:
+        try:
+            from .audio_experimental import narrate
+        except ImportError:
+            from audio_experimental import narrate
+        generated_audio = narrate(cards, Path(args.tts_voice), media_dir, args.tts_side)
+        ext.media.update(generated_audio)
+        ext.stats["audio_generated"] = len(generated_audio)
     basic, cloze, used_media = write_apkg(cards, ext.media, args.deck, target, args.theme)
     report = {
         "version": VERSION, "date": datetime.now(timezone.utc).isoformat(),
@@ -719,7 +738,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Flashcard Architect v4.0: IA portátil + PDF geométrico + temas originais")
+    p = argparse.ArgumentParser(description="Flashcard Architect v4.1: IA portátil + PDF geométrico + temas originais")
     p.add_argument("--input", "-i", required=True)
     p.add_argument("--deck", "-d", default="Estudos::Flashcard Architect")
     p.add_argument("--output", "-o")
@@ -750,6 +769,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--strict-media", action="store_true", help="Falha se uma imagem extraída não for referenciada")
     p.add_argument("--verify-pass", action="store_true", help="Segunda chamada de IA para revisar cartões contra a fonte; aumenta custo/tempo")
     p.add_argument("--non-interactive", "-y", action="store_true")
+    p.add_argument("--experimental-audio", action="store_true", help="Habilita narração Piper experimental")
+    p.add_argument("--tts-voice", help="Voz Piper .onnx já instalada localmente")
+    p.add_argument("--tts-side", choices=["pergunta", "resposta"], default="resposta")
     p.add_argument("--version", action="version", version=VERSION)
     return p
 

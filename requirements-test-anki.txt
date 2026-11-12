@@ -1,0 +1,2 @@
+# Only for recovery integration tests; not a runtime maintenance dependency.
+anki==26.9.4

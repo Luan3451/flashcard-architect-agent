@@ -47,3 +47,11 @@ Para uso sem API via ChatGPT/Claude no navegador: responda com **array JSON puro
 - Antigravity: perfil Gemini 3.8 Flash com `--effort high`; o alias atual `gemini-3.8-flash-high` precisa existir na conta. Confirme o ID disponível, sem prometer disponibilidade ou equivalência entre provedores.
 - IA realmente local: `--provider ollama --model qwen3:8b --chunk-chars 3000 --timeout 1200`, referência RTX 4060 8 GB. Ollama precisa estar iniciado e o modelo baixado. `--effort` não se aplica.
 - Mais memória: `qwen3:14b`; alternativa: `gemma3:12b`. Consulte a tabela de memória no README. Recomendações sem benchmark comparativo; sempre revisar gabaritos.
+
+## Áudio e manutenção — experimentais
+
+A interface `python scripts/interface.py` oferece 1 geração, 2 manutenção e 3 transcrição. Leia `docs/EXPERIMENTAL.md` antes de operar uma coleção real.
+
+Para pedidos como “tirar tudo sobre tema X”, converta a solicitação em termos explícitos e apresente a prévia de `deck_maintenance.py preview`. A correspondência é lexical; não prometa classificação semântica completa. O comando `apply` exige token da prévia e backup APKG com agendamento validado. Não contorne bloqueios de notas/modelos compartilhados. Nunca modifique SQLite diretamente, apague mídia compartilhada ou sincronize automaticamente. Uma falha parcial exige inspeção do journal; não repetir operações destrutivas cegamente.
+
+ASR: `audio_experimental.py` com pesos faster-whisper locais exporta transcrição revisável com timestamps. TTS: gerador com `--experimental-audio --tts-voice voz.onnx --tts-side resposta`. Voz e configuração precisam estar instaladas; dependências opcionais. Revisão textual precede narração. Sempre informar que reprodução em dispositivos e classificação por tema ainda precisam de revisão humana.

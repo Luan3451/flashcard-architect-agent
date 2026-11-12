@@ -39,3 +39,15 @@ Thumbs.db
 Desktop.ini
 
 *.cards.json
+
+# Private experimental audio, maintenance previews and backups
+backups/
+maintenance_plans/
+transcripts/
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.onnx
+*.onnx.json
