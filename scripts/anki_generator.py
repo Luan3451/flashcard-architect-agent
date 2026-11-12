@@ -576,6 +576,9 @@ def write_apkg(cards: list[dict[str, Any]], media: dict[str, Path], deck_name: s
         import genanki
     except ImportError as exc:
         raise RuntimeError("Instale genanki: python -m pip install genanki") from exc
+    ids = [card["id_conceito"] for card in cards]
+    if len(ids) != len(set(ids)):
+        raise ValueError("IDs de conceito repetidos: revise o JSON antes de exportar")
     css = css_for_theme(theme)
     basic_tpl, cloze_tpl = templates()
     model_ids = (note_model_id(theme, "basic"), note_model_id(theme, "cloze"))
@@ -691,6 +694,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         assert_media_coverage(cards, ext.media)
     if not cards:
         raise ValueError("Nenhum cartão validado. Nenhum .apkg criado.")
+    if args.review_only:
+        review_path = target.with_suffix(".cards.json")
+        if review_path.resolve() == source.resolve():
+            raise ValueError("Revisão não pode sobrescrever a entrada")
+        review_path.parent.mkdir(parents=True, exist_ok=True)
+        review_path.write_text(json.dumps(cards, ensure_ascii=False, indent=2, default=list), encoding="utf-8")
+        return {"review": str(review_path), "cards": len(cards), "status": "pending_review"}
     basic, cloze, used_media = write_apkg(cards, ext.media, args.deck, target, args.theme)
     report = {
         "version": VERSION, "date": datetime.now(timezone.utc).isoformat(),
@@ -736,6 +746,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--no-resume", dest="resume", action="store_false")
     p.add_argument("--no-ai", "--offline", action="store_true", help="Entrada JSON pronta, sem IA")
     p.add_argument("--no-report", action="store_true")
+    p.add_argument("--review-only", action="store_true", help="Exporta cartões JSON editáveis, sem gerar .apkg")
     p.add_argument("--strict-media", action="store_true", help="Falha se uma imagem extraída não for referenciada")
     p.add_argument("--verify-pass", action="store_true", help="Segunda chamada de IA para revisar cartões contra a fonte; aumenta custo/tempo")
     p.add_argument("--non-interactive", "-y", action="store_true")

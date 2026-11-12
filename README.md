@@ -137,3 +137,9 @@ A suíte possui testes para sanitização de HTML, chunking sem sobreposição, 
 ## Licença e crédito
 
 O projeto de origem indica MIT. A inspiração para o conceito de temas é atribuída ao `anki-prettify`; nenhum recurso visual ou CSS dele foi copiado.
+
+## Revisão antes da importação e evolução
+
+Use `--review-only` para salvar candidatos em `BARALHO.cards.json` sem criar um baralho. Edite perguntas, respostas e IDs; reimporte com `--input BARALHO.cards.json --no-ai --output revisado.apkg --non-interactive`. Para imagens, acrescente `--source-media original.pdf` e preserve as referências de mídia. Esse JSON contém material de estudo privado e está ignorado pelo Git. Não é uma revisão automática de correção factual.
+
+Consulte [pesquisa e roadmap de evolução](docs/EVOLUCAO.md) para evidências por cartão, OCR estruturado, aulas com timestamps, narração e tutor de voz. O documento distingue recursos implementados de propostas futuras.
