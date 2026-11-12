@@ -4,6 +4,13 @@
 
 Esta distribuição substitui o motor `scripts/anki_generator.py` v3 e mantém a estrutura de agente e skill, agora com triagem de 7 eixos. Para aplicação manual a partir de um ZIP, veja `APLICAR.md`.
 
+
+## Interface e manutenção experimental
+
+Execute `python scripts/interface.py`: **1 Criar cards**, **2 Manter decks existentes**, **3 Transcrever aula**. A opção 2 usa AnkiConnect local e permite estilizar, destacar termos e remover notas por tema ou áudio inválido. Toda mudança exige prévia, confirmação e backup APKG com agendamento em uma pasta local. Notas/modelos compartilhados fora do escopo são bloqueados.
+
+Áudio experimental: transcrição com faster-whisper e narração local com Piper, incluída no `.apkg`. Instalação, limites e recuperação estão no [guia experimental](docs/EXPERIMENTAL.md). As dependências são opcionais; não há download automático de modelos.
+
 ## Instalação
 
 ```bash

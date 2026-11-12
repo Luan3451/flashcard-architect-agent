@@ -1,0 +1,4 @@
+# Experimental; models are downloaded separately by the user.
+faster-whisper>=1.1,<2
+# PyAV 19 removed metadata_errors used by faster-whisper 1.2.1.
+av>=11,<19

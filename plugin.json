@@ -1,18 +1,36 @@
 {
   "name": "flashcard-architect",
-  "version": "4.0.0",
-  "description": "Motor PDF para Anki com provedores OpenAI, Anthropic, Antigravity, Claude Code e Ollama local, temas próprios, checkpoints e extração geométrica.",
+  "version": "4.1.0",
+  "description": "PDF para Anki com IA portátil; áudio local e manutenção de decks com backup (experimentais).",
   "author": "Luan3451",
   "displayName": "Flashcard Architect Portable v4",
-  "agents": ["agents/flashcard-architect.md"],
-  "skills": ["skills/flashcard-architect/SKILL.md"],
+  "agents": [
+    "agents/flashcard-architect.md"
+  ],
+  "skills": [
+    "skills/flashcard-architect/SKILL.md"
+  ],
   "suggestedPrompts": [
     "Converta meu PDF em Anki .apkg, preservando imagens e coordenadas e usando o tema Atlas",
     "Gere cartões com uma IA leve e checkpoints para retomar lotes longos",
-    "Prepare JSON para importar no Flashcard Architect usando ChatGPT ou Claude"
+    "Prepare JSON para importar no Flashcard Architect usando ChatGPT ou Claude",
+    "Prepare uma prévia para remover notas sobre um tema de um deck, com backup antes de aplicar",
+    "Narre os cartões revisados com áudio local experimental"
   ],
   "permissions": {
-    "filesystem": {"read": true, "write": true},
-    "shell": {"execute": true, "allowlist": ["python", "python3", "uv", "agy", "claude"]}
+    "filesystem": {
+      "read": true,
+      "write": true
+    },
+    "shell": {
+      "execute": true,
+      "allowlist": [
+        "python",
+        "python3",
+        "uv",
+        "agy",
+        "claude"
+      ]
+    }
   }
 }

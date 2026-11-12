@@ -17,7 +17,7 @@ A prioridade inferida dessas referências é confiabilidade da fonte e controle 
 
 - `--review-only`: gera um arquivo `.cards.json` editável, sem criar `.apkg`. O JSON pode ser reimportado com `--no-ai`.
 - Bloqueio de IDs de conceitos repetidos na exportação, para evitar notas com a mesma identidade.
-- Nenhum recurso de áudio, voz, Docling ou agendamento adicional foi implementado nesta etapa.
+- Na etapa inicial deste roadmap, áudio e voz eram propostas. A versão 4.1 acrescenta ASR/TTS e manutenção experimentais: veja [guia e limites](EXPERIMENTAL.md). Docling e tutor de voz continuam propostos.
 
 ## Arquitetura de destino (proposta)
 
