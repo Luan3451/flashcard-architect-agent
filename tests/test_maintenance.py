@@ -144,11 +144,14 @@ def test_style_when_all_model_cards_in_scope(tmp_path):
 
 
 def test_highlight_preserves_attributes_cloze_sound_and_existing_marks():
-    original = '<a title="DNS" href="https://dns.test">DNS</a> {{c1::DNS}} [sound:DNS.mp3]<code>DNS</code><mark>DNS</mark>&amp;'
+    original = '<a title="DNS" href="https://dns.test">DNS</a> [sound:DNS.mp3]<code>DNS</code><mark>DNS</mark>&amp;'
     value = dm.highlight(original, ['DNS'])
     assert 'title="DNS" href="https://dns.test"' in value
     assert value.count('background:#ffe568') == 1
-    assert '{{c1::DNS}} [sound:DNS.mp3]' in value
+    assert '[sound:DNS.mp3]' in value
+    cloze = '{{c1::<b>DNS</b>}}'
+    assert dm.highlight(cloze, ['DNS']) == cloze
+    assert dm.highlight('$DNS$', ['DNS']) == '$DNS$'
     assert '<code>DNS</code><mark>DNS</mark>&amp;' in value
     assert dm.highlight(value, ['DNS']) == value
 

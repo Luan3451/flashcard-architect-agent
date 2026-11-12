@@ -124,7 +124,7 @@ class Highlighter(HTMLParser):
         if tag in self.stack:
             self.stack = self.stack[:len(self.stack) - 1 - self.stack[::-1].index(tag)]
     def handle_data(self, data):
-        if any(t in self.stack for t in {'script', 'style', 'code', 'pre', 'mark', 'textarea', 'math'}) or any(t in data for t in ('{{', '[sound:', '\\(', '\\[')):
+        if any(t in self.stack for t in {'script', 'style', 'code', 'pre', 'mark', 'textarea', 'math', 'anki-mathjax', 'svg'}) or any(t in data for t in ('{{', '[sound:', '\\(', '\\[', '$')):
             self.out.append(data)
         else:
             self.out.append(self.pattern.sub(r'<mark style="background:#ffe568;color:#172337;font-weight:700">\1</mark>', data))
@@ -135,6 +135,8 @@ class Highlighter(HTMLParser):
 
 
 def highlight(text, terms):
+    if "{{" in text:
+        return text  # protect cloze syntax even when its contents span HTML tags
     parser = Highlighter(terms)
     parser.feed(text)
     parser.close()
