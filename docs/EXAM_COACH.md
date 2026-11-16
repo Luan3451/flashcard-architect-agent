@@ -50,3 +50,7 @@ python benchmarks/run_network_eval.py --provider ollama --model qwen3:8b \
 Use fontes e questões novas para um conjunto separado antes de tomar decisões de produção. Separe métricas de formato (contagem, preservação, HTML) de qualidade semântica (precisão, causalidade, clareza, cobertura) e de aprendizagem (retenção, que exige estudo longitudinal). Um pequeno ensaio não permite declarar equivalência com GPT nem liderança de mercado.
 
 Resultados de geração real, falhas observadas e decisão de arquitetura: [avaliação 4.2](AVALIACAO_EXAM_COACH.md).
+
+### Conferência mecânica adicional
+
+A partir da versão 4.2.1, números e unidades da explicação também são comparados lexicalmente com a fonte. Divergências acrescentam motivos de revisão e invalidam checkpoints do perfil anterior. O prompt de geração não mudou; a checagem é local, sem chamadas extras. Para bloquear candidatos duvidosos na exportação, passe `--strict-quality` ao gerador `.apkg`. Veja [controle de qualidade](QUALITY_GATES.md) para os limites, inclusive conversões e cálculos válidos que podem pedir revisão.

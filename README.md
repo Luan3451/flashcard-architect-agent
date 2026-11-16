@@ -154,3 +154,7 @@ Consulte [pesquisa e roadmap de evolução](docs/EVOLUCAO.md) para evidências p
 ## Questões de simulado: perfil Exam Coach
 
 Para preservar enunciados/alternativas e gerar uma explicação em português no mesmo cartão, use o [Exam Coach](docs/EXAM_COACH.md). Ele recebe questões estruturadas com fonte, conserva o gabarito no topo, recolhe a explicação e sinaliza itens que exigem revisão. Inclui checkpoints por questão e revisão extra opcional. [Casos públicos originais](benchmarks/network_cases.json) e runner de comparação acompanham o perfil. Nenhuma conversa pessoal faz parte do repositório.
+
+## Qualidade antes da exportação
+
+A versão 4.2.1 bloqueia campos vazios após a sanitização e registros inválidos sem descartá-los silenciosamente. Audita possíveis vazamentos em Cloze e números/unidades da explicação contra a fonte no Exam Coach. O diagnóstico fica em `.quality.json`; alertas recebem a tag `revisar`. Use `--strict-quality` para bloquear também alertas, ou `--review-only` para corrigir os candidatos. [Regras, limites e testes](docs/QUALITY_GATES.md).

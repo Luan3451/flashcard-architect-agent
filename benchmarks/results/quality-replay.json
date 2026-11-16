@@ -1,0 +1,201 @@
+{
+  "policy": "deterministic-qc-1",
+  "method": "Replay of 22 existing real-model responses; no new inference, no semantic judge.",
+  "checked": 22,
+  "rows_with_warnings": 4,
+  "rows_with_errors": 0,
+  "results": [
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_ssh",
+      "strategy": "direct",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_ssh",
+      "strategy": "guided",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_ssh",
+      "strategy": "guided_review",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_ospf",
+      "strategy": "direct",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_ospf",
+      "strategy": "guided",
+      "issues": [
+        {
+          "code": "number_not_in_source",
+          "severity": "warning",
+          "item": null,
+          "field": null,
+          "value": "1",
+          "unit": ""
+        },
+        {
+          "code": "number_not_in_source",
+          "severity": "warning",
+          "item": null,
+          "field": null,
+          "value": "255",
+          "unit": ""
+        },
+        {
+          "code": "review_tag_present",
+          "severity": "warning",
+          "item": 1,
+          "field": null
+        }
+      ]
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_ospf",
+      "strategy": "guided_review",
+      "issues": [
+        {
+          "code": "number_not_in_source",
+          "severity": "warning",
+          "item": null,
+          "field": null,
+          "value": "1",
+          "unit": ""
+        },
+        {
+          "code": "number_not_in_source",
+          "severity": "warning",
+          "item": null,
+          "field": null,
+          "value": "255",
+          "unit": ""
+        },
+        {
+          "code": "review_tag_present",
+          "severity": "warning",
+          "item": 1,
+          "field": null
+        }
+      ]
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_route",
+      "strategy": "direct",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_route",
+      "strategy": "guided",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_route",
+      "strategy": "guided_review",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_trunk",
+      "strategy": "direct",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_trunk",
+      "strategy": "guided",
+      "issues": []
+    },
+    {
+      "artifact": "initial-seed42.json",
+      "id": "net_trunk",
+      "strategy": "guided_review",
+      "issues": []
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "net_ssh",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "hold_arp",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "hold_acl",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "hold_conflict",
+      "strategy": "evidence_first_ptbr",
+      "issues": [
+        {
+          "code": "review_tag_present",
+          "severity": "warning",
+          "item": 1,
+          "field": null
+        }
+      ]
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "net_ospf",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "net_route",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "final-seed42.json",
+      "id": "net_trunk",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "heldout-seed7.json",
+      "id": "hold_arp",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "heldout-seed7.json",
+      "id": "hold_acl",
+      "strategy": "evidence_first_ptbr",
+      "issues": []
+    },
+    {
+      "artifact": "heldout-seed7.json",
+      "id": "hold_conflict",
+      "strategy": "evidence_first_ptbr",
+      "issues": [
+        {
+          "code": "review_tag_present",
+          "severity": "warning",
+          "item": 1,
+          "field": null
+        }
+      ]
+    }
+  ]
+}

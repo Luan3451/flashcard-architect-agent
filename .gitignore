@@ -51,3 +51,6 @@ transcripts/
 *.ogg
 *.onnx
 *.onnx.json
+
+# Private quality diagnostics
+*.quality.json
