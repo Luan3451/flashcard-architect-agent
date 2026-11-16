@@ -32,7 +32,12 @@ try:
 except ImportError:  # python scripts/anki_generator.py
     from themes import THEMES, css_for_theme, note_model_id, templates
 
-VERSION = "4.2.0"
+try:
+    from . import quality
+except ImportError:
+    import quality
+
+VERSION = "4.2.1"
 log = logging.getLogger("flashcard-architect")
 DEFAULT_MODELS = {
     "agy": "gemini-3.8-flash-high",  # override if not available in your agy account
@@ -330,15 +335,22 @@ def parse_cards(raw: str, media: dict[str, Path]) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         raise ValueError("Resposta não contém lista JSON")
     cards = []
-    for item in value:
+    rejected = []
+    for index, item in enumerate(value, 1):
         if not isinstance(item, dict):
+            rejected.append(quality.issue('card_not_object', 'error', item=index))
             continue
         front = item.get("pergunta", item.get("front", ""))
         back = item.get("resposta", item.get("back", ""))
-        if not isinstance(front, str) or not isinstance(back, str) or not front.strip() or not back.strip():
+        if not isinstance(front, str) or not isinstance(back, str):
+            rejected.extend(quality.field_issues(front, back, media, item=index))
             continue
         front, images1 = sanitize_html(front, set(media))
         back, images2 = sanitize_html(back, set(media))
+        errors = quality.field_issues(front, back, media, item=index)
+        if errors:
+            rejected.extend(errors)
+            continue
         tags = item.get("tags", [])
         if not isinstance(tags, list):
             tags = []
@@ -348,6 +360,7 @@ def parse_cards(raw: str, media: dict[str, Path]) -> list[dict[str, Any]]:
             uid = "c_" + sha(front)[:20]
         cards.append({"pergunta": front, "resposta": back, "id_conceito": uid,
                       "tags": sorted(set(tags)), "images": images1 | images2})
+    quality.ensure_no_errors(rejected)
     return cards
 
 
@@ -571,6 +584,10 @@ def generate(chunks: list[str], media: dict[str, Path], provider: str, model: st
                 except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired) as exc:
                     log.warning("Lote %d/%d tentativa %d/%d: %s", i, len(chunks), attempt+1, args.retries+1, exc)
                     if attempt == args.retries:
+                        if isinstance(exc, quality.QualityError):
+                            for finding in exc.issues:
+                                finding['chunk'] = i
+                            raise
                         raise RuntimeError(f"Lote {i}/{len(chunks)} falhou. Não gerarei um baralho incompleto. "
                                            "Retome com --resume após resolver o problema.") from exc
                     time.sleep(min(2 ** attempt * 3, 30))
@@ -580,14 +597,17 @@ def generate(chunks: list[str], media: dict[str, Path], provider: str, model: st
 
 
 def write_apkg(cards: list[dict[str, Any]], media: dict[str, Path], deck_name: str,
-               output_path: Path, theme: str) -> tuple[int, int, set[str]]:
+               output_path: Path, theme: str, strict_quality: bool = False) -> tuple[int, int, set[str]]:
     try:
         import genanki
     except ImportError as exc:
         raise RuntimeError("Instale genanki: python -m pip install genanki") from exc
-    ids = [card["id_conceito"] for card in cards]
-    if len(ids) != len(set(ids)):
-        raise ValueError("IDs de conceito repetidos: revise o JSON antes de exportar")
+    findings = quality.audit_cards(cards, media)
+    if strict_quality and any(i['severity'] == 'warning' for i in findings):
+        findings.append(quality.issue('review_required_strict', 'error'))
+    quality.write_report(output_path.with_suffix('.quality.json'), findings, cards=len(cards))
+    quality.ensure_no_errors(findings)
+    review_items = {i['item'] for i in findings if i['severity'] == 'warning'}
     css = css_for_theme(theme)
     basic_tpl, cloze_tpl = templates()
     model_ids = (note_model_id(theme, "basic"), note_model_id(theme, "cloze"))
@@ -602,12 +622,12 @@ def write_apkg(cards: list[dict[str, Any]], media: dict[str, Path], deck_name: s
     deck = genanki.Deck(deck_id or 1, deck_name)
     basic_count = cloze_count = 0
     used_media: set[str] = set()
-    for card in cards:
+    for item_index, card in enumerate(cards, 1):
         front, back = card["pergunta"], card["resposta"]
         used_media.update(card.get("images", set()))
         is_cloze = bool(CLOZE.search(front))
         note = genanki.Note(model=cloze if is_cloze else basic,
-                            fields=[front, back], tags=card["tags"],
+                            fields=[front, back], tags=sorted(set(card["tags"]) | ({'revisar'} if item_index in review_items else set())),
                             guid=genanki.guid_for(deck_name, card["id_conceito"]))
         deck.add_note(note)
         cloze_count += int(is_cloze)
@@ -621,6 +641,7 @@ def write_apkg(cards: list[dict[str, Any]], media: dict[str, Path], deck_name: s
     package.media_files = [str(media[name]) for name in sorted(used_media)]
     package.write_to_file(str(temp))
     temp.replace(output_path)
+    quality.write_report(output_path.with_suffix('.quality.json'), findings, cards=len(cards), exported=True)
     return basic_count, cloze_count, used_media
 
 
@@ -655,6 +676,19 @@ def wizard(args: argparse.Namespace) -> None:
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
+    target = Path(args.output).expanduser() if args.output else Path.cwd() / (re.sub(r'[^\w-]+', '_', args.deck) + '.apkg')
+    report_path = target.with_suffix('.quality.json')
+    if report_path.resolve() == Path(args.input).expanduser().resolve():
+        raise ValueError('Relatório de qualidade não pode sobrescrever a entrada')
+    try:
+        return _run(args)
+    except quality.QualityError as exc:
+        quality.write_report(report_path, exc.issues)
+        log.error('Relatório de rejeição: %s', report_path)
+        raise
+
+
+def _run(args: argparse.Namespace) -> dict[str, Any]:
     wizard(args)
     if args.tts_voice and not args.experimental_audio:
         raise ValueError("Narração exige --experimental-audio")
@@ -707,6 +741,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         assert_media_coverage(cards, ext.media)
     if not cards:
         raise ValueError("Nenhum cartão validado. Nenhum .apkg criado.")
+    findings = quality.audit_cards(cards, ext.media)
+    if args.strict_quality and not args.review_only and any(i['severity'] == 'warning' for i in findings):
+        findings.append(quality.issue('review_required_strict', 'error'))
+    quality.write_report(target.with_suffix('.quality.json'), findings, cards=len(cards))
+    quality.ensure_no_errors(findings)
+    for finding in findings:
+        if finding['severity'] == 'warning':
+            card = cards[finding['item'] - 1]
+            card['tags'] = sorted(set(card['tags']) | {'revisar'})
     if args.review_only:
         review_path = target.with_suffix(".cards.json")
         if review_path.resolve() == source.resolve():
@@ -722,7 +765,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         generated_audio = narrate(cards, Path(args.tts_voice), media_dir, args.tts_side)
         ext.media.update(generated_audio)
         ext.stats["audio_generated"] = len(generated_audio)
-    basic, cloze, used_media = write_apkg(cards, ext.media, args.deck, target, args.theme)
+    basic, cloze, used_media = write_apkg(cards, ext.media, args.deck, target, args.theme, strict_quality=args.strict_quality)
     report = {
         "version": VERSION, "date": datetime.now(timezone.utc).isoformat(),
         "source": source.name, "output": target.name, "provider": args.provider if not args.no_ai else "offline",
@@ -733,6 +776,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "media_embedded": len(used_media),
         "media_unused": len(ext.media)-len(used_media),
         "filtered": args.filter,
+        "quality_report": str(target.with_suffix('.quality.json')),
+        "quality_warnings": sum(i['severity'] == 'warning' for i in findings),
     }
     if not args.no_report:
         target.with_suffix(".audit.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -740,7 +785,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Flashcard Architect v4.2: IA portátil + PDF geométrico + temas originais")
+    p = argparse.ArgumentParser(description="Flashcard Architect v4.2.1: IA portátil + PDF geométrico + temas originais")
     p.add_argument("--input", "-i", required=True)
     p.add_argument("--deck", "-d", default="Estudos::Flashcard Architect")
     p.add_argument("--output", "-o")
@@ -768,6 +813,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--no-ai", "--offline", action="store_true", help="Entrada JSON pronta, sem IA")
     p.add_argument("--no-report", action="store_true")
     p.add_argument("--review-only", action="store_true", help="Exporta cartões JSON editáveis, sem gerar .apkg")
+    p.add_argument("--strict-quality", action="store_true", help="Bloqueia .apkg com alertas de qualidade; permite --review-only")
     p.add_argument("--strict-media", action="store_true", help="Falha se uma imagem extraída não for referenciada")
     p.add_argument("--verify-pass", action="store_true", help="Segunda chamada de IA para revisar cartões contra a fonte; aumenta custo/tempo")
     p.add_argument("--non-interactive", "-y", action="store_true")

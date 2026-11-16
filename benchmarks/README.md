@@ -16,3 +16,5 @@ A estratégia guided_review reutiliza o candidato de guided. Seu tempo e custo i
 Não adicione suas questões pessoais nesta pasta pública. Use um diretório privado ignorado pelo Git para corpora, saídas e evidências particulares.
 
 As observações, limites e configuração do ensaio publicado estão em [avaliação 4.2](../docs/AVALIACAO_EXAM_COACH.md).
+
+Replay dos validadores da versão 4.2.1: `python benchmarks/replay_quality.py --output replay_local.json`. Reutiliza 22 respostas arquivadas, sem novas chamadas. Os critérios e os alertas estão documentados em [controle de qualidade](../docs/QUALITY_GATES.md).

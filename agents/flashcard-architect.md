@@ -61,3 +61,7 @@ ASR: `audio_experimental.py` com pesos faster-whisper locais exporta transcriç�
 Use `scripts/exam_coach.py` ou opção 4 da interface para questões estruturadas (`id`, `stem`, `options`, `answer`, `source`). O programa preserva enunciado/alternativas, mantém uma questão por cartão e gera somente a explicação em português, recolhida abaixo do gabarito. Prefira essa rota quando fidelidade ao simulado for prioritária; ela não substitui a extração/triagem do PDF.
 
 Leia `docs/EXAM_COACH.md` e o relatório de avaliação. Nunca declare equivalência com outro modelo com base em testes de código. Conferir citação literal não prova correção semântica. `--verify` é uma revisão extra opcional e pode repetir erros; checkpoints evitam chamadas repetidas. Fontes, conversas e relatórios pessoais ficam fora do Git.
+
+## Verificações de qualidade 4.2.1
+
+Consulte `docs/QUALITY_GATES.md`. Registros inválidos e campos vazios após limpeza interrompem a exportação; use o `.quality.json` para indicar itens/campos a corrigir. Alertas de Cloze e números/unidades exigem revisão, sem renumerar, corrigir silenciosamente ou criar cartões extras. `c2` sem `c1` é permitido. Para exigir ausência de alertas, use `--strict-quality`; `--review-only` continua disponível para conferir candidatos. Mantenha IDs persistentes e preserve o backup obrigatório da manutenção. Não apresente essas heurísticas como prova de correção semântica.
