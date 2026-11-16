@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "model": "Qwen3-4B-Q4_K_M",
+    "transport": "llama.cpp local",
+    "seed": 7,
+    "temperature": 0.2,
+    "profile": "exam-coach-2",
+    "scores": "not automatically judged; review actual content",
+    "phase": "final_profile_heldout_seed7"
+  },
+  "results": [
+    {
+      "id": "hold_arp",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"A primeira camada de encapsulamento de um pacote em uma rede local requer o MAC address do próximo salto (next hop).\",\n  \"mechanism\": \"Quando um host envia um pacote para uma sub-rede diferente, ele usa a rota padrão como próximo salto. O host resolve o endereço IPv4 local do roteador padrão usando ARP. O pacote é enviado para o MAC address do roteador padrão. O endereço IP de destino permanece o da hospedeira remota. Solicitações ARP não cruzam o roteador para descobrir o MAC address da hospedeira remota.\",\n  \"evidence\": \"When a destination is outside the local subnet and the host uses a default route, the next hop is the default gateway. The host resolves the gateway's local IPv4 address with ARP and sends the Ethernet frame to the gateway's MAC address. The IP destination remains the remote host's address. ARP requests do not cross the router to discover the remote server's MAC address.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "A primeira camada de encapsulamento de um pacote em uma rede local requer o MAC address do próximo salto (next hop).",
+        "mechanism": "Quando um host envia um pacote para uma sub-rede diferente, ele usa a rota padrão como próximo salto. O host resolve o endereço IPv4 local do roteador padrão usando ARP. O pacote é enviado para o MAC address do roteador padrão. O endereço IP de destino permanece o da hospedeira remota. Solicitações ARP não cruzam o roteador para descobrir o MAC address da hospedeira remota.",
+        "evidence": "When a destination is outside the local subnet and the host uses a default route, the next hop is the default gateway. The host resolves the gateway's local IPv4 address with ARP and sends the Ethernet frame to the gateway's MAC address. The IP destination remains the remote host's address. ARP requests do not cross the router to discover the remote server's MAC address.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "hold_arp",
+          "pergunta": "A host has an IPv4 default gateway on its local Ethernet subnet. It sends a packet to a different subnet. Whose MAC address is needed for the first-hop frame?<br><br>A. The remote server&#x27;s MAC address<br>B. The default gateway interface&#x27;s MAC address",
+          "resposta": "<b>Correct answer:</b><br>B. The default gateway interface&#x27;s MAC address<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A primeira camada de encapsulamento de um pacote em uma rede local requer o <span class=\"k-key\">MAC</span> address do próximo salto (next hop).</p><div class=\"k-h\">Por que está correta</div><p>Quando um host envia um pacote para uma sub-rede diferente, ele usa a rota padrão como próximo salto. O host resolve o endereço <span class=\"k-key\">IP</span>v4 local do roteador padrão usando <span class=\"k-key\">ARP</span>. O pacote é enviado para o <span class=\"k-key\">MAC</span> address do roteador padrão. O endereço <span class=\"k-key\">IP</span> de destino permanece o da hospedeira remota. Solicitações <span class=\"k-key\">ARP</span> não cruzam o roteador para descobrir o <span class=\"k-key\">MAC</span> address da hospedeira remota.</p><div class=\"k-h\">Evidência na fonte</div><p>When a destination is outside the local subnet and the host uses a default route, the next hop is the default gateway. The host resolves the gateway&#x27;s local IPv4 address with ARP and sends the Ethernet frame to the gateway&#x27;s MAC address. The IP destination remains the remote host&#x27;s address. ARP requests do not cross the router to discover the remote server&#x27;s MAC address.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 32.898,
+      "calls": 1,
+      "parse_ok": true
+    },
+    {
+      "id": "hold_acl",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"A ordem de processamento de entradas em uma lista de controle de acesso (ACL) determina qual regra é aplicada a um pacote.\",\n  \"mechanism\": \"O ACL processa as entradas na ordem em que são listadas. Uma permissão (permit) para 192.0.2.10 ocorre antes de uma proibição (deny) para 192.0.2.0/24. Quando um pacote com origem 192.0.2.10 corresponde à permissão, ele é permitido e a proibição subsequente não é avaliada. A permissão tem prioridade sobre a proibição devido à ordem de processamento.\",\n  \"evidence\": \"An IPv4 ACL processes entries in order and stops at the first matching entry. A permit entry for source 192.0.2.10 occurs before a deny entry for source 192.0.2.0/24 in this ACL. Traffic from 192.0.2.10 matches the permit entry first, so it is permitted and the later deny entry is not evaluated. If no entry matches, the implicit deny applies.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "A ordem de processamento de entradas em uma lista de controle de acesso (ACL) determina qual regra é aplicada a um pacote.",
+        "mechanism": "O ACL processa as entradas na ordem em que são listadas. Uma permissão (permit) para 192.0.2.10 ocorre antes de uma proibição (deny) para 192.0.2.0/24. Quando um pacote com origem 192.0.2.10 corresponde à permissão, ele é permitido e a proibição subsequente não é avaliada. A permissão tem prioridade sobre a proibição devido à ordem de processamento.",
+        "evidence": "An IPv4 ACL processes entries in order and stops at the first matching entry. A permit entry for source 192.0.2.10 occurs before a deny entry for source 192.0.2.0/24 in this ACL. Traffic from 192.0.2.10 matches the permit entry first, so it is permitted and the later deny entry is not evaluated. If no entry matches, the implicit deny applies.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "hold_acl",
+          "pergunta": "An inbound IPv4 ACL contains a permit for 192.0.2.10 before a deny for 192.0.2.0/24. What happens to a packet from 192.0.2.10 that matches both entries?<br><br>A. It is denied because deny is more restrictive<br>B. It is permitted by the first matching entry",
+          "resposta": "<b>Correct answer:</b><br>B. It is permitted by the first matching entry<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A ordem de processamento de entradas em uma lista de controle de acesso (ACL) determina qual regra é aplicada a um pacote.</p><div class=\"k-h\">Por que está correta</div><p>O ACL processa as entradas na ordem em que são listadas. Uma permissão (<span class=\"k-key\">permit</span>) para 192.0.2.10 ocorre antes de uma proibição (<span class=\"k-key\">deny</span>) para 192.0.2.0/24. Quando um pacote com origem 192.0.2.10 corresponde à permissão, ele é <span class=\"k-key\">permit</span>ido e a proibição subsequente não é avaliada. A permissão tem prioridade sobre a proibição devido à ordem de processamento.</p><div class=\"k-h\">Evidência na fonte</div><p>An IPv4 ACL processes entries in order and stops at the first matching entry. A permit entry for source 192.0.2.10 occurs before a deny entry for source 192.0.2.0/24 in this ACL. Traffic from 192.0.2.10 matches the permit entry first, so it is permitted and the later deny entry is not evaluated. If no entry matches, the implicit deny applies.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 33.93,
+      "calls": 1,
+      "parse_ok": true
+    },
+    {
+      "id": "hold_conflict",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"O porto TCP utilizado pelo SSH é 22.\",\n  \"mechanism\": \"A fonte afirma que o SSH normalmente usa o porto TCP 22, enquanto o Telnet usa o porto 23. O gabarito da questão indica que o SSH usa o porto 23, o que contradiz a informação fornecida na fonte.\",\n  \"evidence\": \"SSH normally uses TCP port 22. Telnet normally uses TCP port 23.\",\n  \"review_reason\": \"A fonte afirma que o SSH usa o porto 22, mas o gabarito da questão indica que o SSH usa o porto 23, o que é uma contradição com a informação fornecida.\"\n}",
+      "explanation": {
+        "concept": "O porto TCP utilizado pelo SSH é 22.",
+        "mechanism": "A fonte afirma que o SSH normalmente usa o porto TCP 22, enquanto o Telnet usa o porto 23. O gabarito da questão indica que o SSH usa o porto 23, o que contradiz a informação fornecida na fonte.",
+        "evidence": "SSH normally uses TCP port 22. Telnet normally uses TCP port 23.",
+        "review_reason": "A fonte afirma que o SSH usa o porto 22, mas o gabarito da questão indica que o SSH usa o porto 23, o que é uma contradição com a informação fornecida."
+      },
+      "cards": [
+        {
+          "id_conceito": "hold_conflict",
+          "pergunta": "Which TCP port is used by SSH?<br><br>A. 22<br>B. 23",
+          "resposta": "<b>Gabarito fornecido — REVISAR:</b><br>B. 23<p><span class=\"k-warn\">REVISAR: A fonte afirma que o SSH usa o porto 22, mas o gabarito da questão indica que o SSH usa o porto 23, o que é uma contradição com a informação fornecida.</span></p><details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>O porto TCP utilizado pelo <span class=\"k-key\">SSH</span> é <span class=\"k-key\">22</span>.</p><div class=\"k-h\">Análise da fonte</div><p>A fonte afirma que o <span class=\"k-key\">SSH</span> normalmente usa o porto TCP <span class=\"k-key\">22</span>, enquanto o Telnet usa o porto 23. O gabarito da questão indica que o <span class=\"k-key\">SSH</span> usa o porto 23, o que contradiz a informação fornecida na fonte.</p><div class=\"k-h\">Evidência na fonte</div><p>SSH normally uses TCP port 22. Telnet normally uses TCP port 23.</p></details>",
+          "tags": [
+            "exam_coach",
+            "revisar"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 22.277,
+      "calls": 1,
+      "parse_ok": true
+    }
+  ]
+}

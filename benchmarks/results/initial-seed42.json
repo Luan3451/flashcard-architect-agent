@@ -1,0 +1,256 @@
+{
+  "metadata": {
+    "model": "Qwen3-4B-Q4_K_M",
+    "transport": "llama.cpp local",
+    "seed": 42,
+    "temperature": 0.2,
+    "profile": "exam-coach-1",
+    "scores": "not automatically judged; review actual content",
+    "phase": "development_initial",
+    "model_revision": "bc640142c66e1fdd12af0bd68f40445458f3869b",
+    "model_sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+    "runtime": "llama.cpp b12359 b1b770d90",
+    "threads": 2,
+    "ctx_size": 4096,
+    "thinking": false,
+    "note": "Calls run with initial prompt archived in benchmarks/prompts; reviewed qualitatively, not independently."
+  },
+  "results": [
+    {
+      "id": "net_ssh",
+      "strategy": "direct",
+      "raw": "[{\"id_conceito\":\"conceito_1\",\"pergunta\":\"Which TCP port is used by SSH?\",\"resposta\":\"<span class=\\\"ans\\\">B. 22</span>\",\"tags\":[\"TCP\",\"SSH\",\"portos\"]}]",
+      "seconds": 20.619,
+      "calls": 1,
+      "cards": [
+        {
+          "pergunta": "Which TCP port is used by SSH?",
+          "resposta": "<span class=\"ans\">B. 22</span>",
+          "id_conceito": "conceito_1",
+          "tags": [
+            "portos",
+            "ssh",
+            "tcp"
+          ],
+          "images": []
+        }
+      ],
+      "parse_ok": true
+    },
+    {
+      "id": "net_ssh",
+      "strategy": "guided",
+      "raw": "{\n  \"concept\": \"SSH utiliza o porto TCP 22.\",\n  \"mechanism\": \"SSH é um protocolo de segurança que opera em um porto específico para estabelecer conexões criptografadas. O uso do porto 22 permite que o cliente se conecte ao servidor e estabeleça uma sessão segura para administração remota. Em contraste, Telnet usa o porto 23, mas não oferece criptografia, o que torna o uso do porto 22 essencial para a segurança do SSH.\",\n  \"evidence\": \"SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_ssh",
+          "pergunta": "Which TCP port is used by SSH?<br><br>A. 21<br>B. 22<br>C. 23<br>D. 80",
+          "resposta": "<b>Correct answer:</b><br>B. 22<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p><span class=\"k-key\">SSH</span> utiliza o porto <span class=\"k-key\">TCP</span> <span class=\"k-key\">22</span>.</p><div class=\"k-h\">Por que está correta</div><p><span class=\"k-key\">SSH</span> é um protocolo de segurança que opera em um porto específico para estabelecer conexões criptografadas. O uso do porto <span class=\"k-key\">22</span> permite que o cliente se conecte ao servidor e estabeleça uma sessão segura para administração remota. Em contraste, Telnet usa o porto 23, mas não oferece criptografia, o que torna o uso do porto <span class=\"k-key\">22</span> essencial para a segurança do <span class=\"k-key\">SSH</span>.</p><div class=\"k-h\">Evidência na fonte</div><p>SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 31.131,
+      "calls": 1,
+      "parse_ok": true
+    },
+    {
+      "id": "net_ssh",
+      "strategy": "guided_review",
+      "raw": "{\n  \"concept\": \"SSH utiliza o porto TCP 22.\",\n  \"mechanism\": \"SSH é um protocolo de segurança que opera em um porto específico para estabelecer conexões criptografadas. O uso do porto 22 permite que o cliente se conecte ao servidor e estabeleça uma sessão segura para administração remota. Em contraste, Telnet usa o porto 23, mas não oferece criptografia, o que torna o uso do porto 22 essencial para a segurança do SSH.\",\n  \"evidence\": \"SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_ssh",
+          "pergunta": "Which TCP port is used by SSH?<br><br>A. 21<br>B. 22<br>C. 23<br>D. 80",
+          "resposta": "<b>Correct answer:</b><br>B. 22<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p><span class=\"k-key\">SSH</span> utiliza o porto <span class=\"k-key\">TCP</span> <span class=\"k-key\">22</span>.</p><div class=\"k-h\">Por que está correta</div><p><span class=\"k-key\">SSH</span> é um protocolo de segurança que opera em um porto específico para estabelecer conexões criptografadas. O uso do porto <span class=\"k-key\">22</span> permite que o cliente se conecte ao servidor e estabeleça uma sessão segura para administração remota. Em contraste, Telnet usa o porto 23, mas não oferece criptografia, o que torna o uso do porto <span class=\"k-key\">22</span> essencial para a segurança do <span class=\"k-key\">SSH</span>.</p><div class=\"k-h\">Evidência na fonte</div><p>SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 57.923,
+      "calls": 2,
+      "parse_ok": true
+    },
+    {
+      "id": "net_ospf",
+      "strategy": "direct",
+      "raw": "[{\"id_conceito\":\"conceito_1\",\"pergunta\":\"On a broadcast OSPF network, which interface priority makes a router ineligible for DR election?\",\"resposta\":\"<span class=\\\"ans\\\">A. 0</span>\",\"tags\":[\"ospf\",\"dr-election\",\"priority\"]}]",
+      "seconds": 10.698,
+      "calls": 1,
+      "cards": [
+        {
+          "pergunta": "On a broadcast OSPF network, which interface priority makes a router ineligible for DR election?",
+          "resposta": "<span class=\"ans\">A. 0</span>",
+          "id_conceito": "conceito_1",
+          "tags": [
+            "dr-election",
+            "ospf",
+            "priority"
+          ],
+          "images": []
+        }
+      ],
+      "parse_ok": true
+    },
+    {
+      "id": "net_ospf",
+      "strategy": "guided",
+      "raw": "{\n  \"concept\": \"A priority of 0 makes a router ineligible for DR election in OSPF.\",\n  \"mechanism\": \"In OSPF, router priority determines eligibility for DR (Designated Router) and BDR (Backup Designated Router) roles. A priority of 0 means the router is not considered a candidate for these roles. Higher priority values (1-255) make routers eligible, with the highest priority router becoming DR. If there is a tie, the router with the highest Router ID is selected. The election is non-preemptive, meaning a new higher-priority router does not replace the current DR automatically.\",\n  \"evidence\": \"On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_ospf",
+          "pergunta": "On a broadcast OSPF network, which interface priority makes a router ineligible for DR election?<br><br>A. 0<br>B. 1<br>C. 100<br>D. 255",
+          "resposta": "<b>Correct answer:</b><br>A. 0<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A priority of <span class=\"k-key\">0</span> makes a router ineligible for <span class=\"k-key\">DR</span> election in <span class=\"k-key\">OSPF</span>.</p><div class=\"k-h\">Por que está correta</div><p>In <span class=\"k-key\">OSPF</span>, router priority determines eligibility for <span class=\"k-key\">DR</span> (Designated Router) and <span class=\"k-key\">BDR</span> (Backup Designated Router) roles. A priority of <span class=\"k-key\">0</span> means the router is not considered a candidate for these roles. Higher priority values (1-255) make routers eligible, with the highest priority router becoming <span class=\"k-key\">DR</span>. If there is a tie, the router with the highest Router ID is selected. The election is non-preemptive, meaning a new higher-priority router does not replace the current <span class=\"k-key\">DR</span> automatically.</p><div class=\"k-h\">Evidência na fonte</div><p>On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 24.859,
+      "calls": 1,
+      "parse_ok": true
+    },
+    {
+      "id": "net_ospf",
+      "strategy": "guided_review",
+      "raw": "{\n  \"concept\": \"A priority of 0 makes a router ineligible for DR election in OSPF.\",\n  \"mechanism\": \"In OSPF, router priority determines eligibility for DR (Designated Router) and BDR (Backup Designated Router) roles. A priority of 0 means the router is not considered a candidate for these roles. Higher priority values (1-255) make routers eligible, with the highest priority router becoming DR. If there is a tie, the router with the highest Router ID is selected. The election is non-preemptive, meaning a new higher-priority router does not replace the current DR automatically.\",\n  \"evidence\": \"On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_ospf",
+          "pergunta": "On a broadcast OSPF network, which interface priority makes a router ineligible for DR election?<br><br>A. 0<br>B. 1<br>C. 100<br>D. 255",
+          "resposta": "<b>Correct answer:</b><br>A. 0<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A priority of <span class=\"k-key\">0</span> makes a router ineligible for <span class=\"k-key\">DR</span> election in <span class=\"k-key\">OSPF</span>.</p><div class=\"k-h\">Por que está correta</div><p>In <span class=\"k-key\">OSPF</span>, router priority determines eligibility for <span class=\"k-key\">DR</span> (Designated Router) and <span class=\"k-key\">BDR</span> (Backup Designated Router) roles. A priority of <span class=\"k-key\">0</span> means the router is not considered a candidate for these roles. Higher priority values (1-255) make routers eligible, with the highest priority router becoming <span class=\"k-key\">DR</span>. If there is a tie, the router with the highest Router ID is selected. The election is non-preemptive, meaning a new higher-priority router does not replace the current <span class=\"k-key\">DR</span> automatically.</p><div class=\"k-h\">Evidência na fonte</div><p>On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 56.73,
+      "calls": 2,
+      "parse_ok": true
+    },
+    {
+      "id": "net_route",
+      "strategy": "direct",
+      "raw": "[{\"id_conceito\":\"conceito_1\",\"pergunta\":\"O que é selecionado para o endereço 10.20.30.8 entre as rotas 10.20.0.0/16 via OSPF e 10.20.30.0/24 via RIP?\",\"resposta\":\"<span class=\\\"ans\\\">RIP /24</span>\",\"tags\":[\"roteamento\",\"IPv4\",\"rotas\"]}]}",
+      "seconds": 17.781,
+      "calls": 1,
+      "cards": [
+        {
+          "pergunta": "O que é selecionado para o endereço 10.20.30.8 entre as rotas 10.20.0.0/16 via OSPF e 10.20.30.0/24 via RIP?",
+          "resposta": "<span class=\"ans\">RIP /24</span>",
+          "id_conceito": "conceito_1",
+          "tags": [
+            "ipv4",
+            "rotas",
+            "roteamento"
+          ],
+          "images": []
+        }
+      ],
+      "parse_ok": true
+    },
+    {
+      "id": "net_route",
+      "strategy": "guided",
+      "raw": "{\n  \"concept\": \"Forwarding selects the longest matching prefix for route selection\",\n  \"mechanism\": \"When multiple routes match a destination, the longest prefix takes precedence. The /24 route (10.20.30.0/24) is more specific than the /16 route (10.20.0.0/16). During forwarding, the /24 route is chosen because it matches the destination IP 10.20.30.8 more precisely. Administrative distance is used during route installation, not during forwarding, so it does not affect the selection of the longest prefix.\",\n  \"evidence\": \"Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_route",
+          "pergunta": "Two installed IPv4 routes match a destination: 10.20.0.0/16 via OSPF and 10.20.30.0/24 via RIP. Which route is used for 10.20.30.8?<br><br>A. OSPF /16<br>B. RIP /24",
+          "resposta": "<b>Correct answer:</b><br>B. RIP /24<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>Forwarding selects the longest matching <span class=\"k-key\">prefix</span> for route selection</p><div class=\"k-h\">Por que está correta</div><p>When multiple routes match a destination, the longest <span class=\"k-key\">prefix</span> takes precedence. The <span class=\"k-key\">/24</span> route (10.20.30.0<span class=\"k-key\">/24</span>) is more specific than the /16 route (10.20.0.0/16). During forwarding, the <span class=\"k-key\">/24</span> route is chosen because it matches the destination IP 10.20.30.8 more precisely. <span class=\"k-key\">Administrative distance</span> is used during route installation, not during forwarding, so it does not affect the selection of the longest <span class=\"k-key\">prefix</span>.</p><div class=\"k-h\">Evidência na fonte</div><p>Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 28.573,
+      "calls": 1,
+      "parse_ok": true
+    },
+    {
+      "id": "net_route",
+      "strategy": "guided_review",
+      "raw": "{\n  \"concept\": \"Forwarding selects the longest matching prefix for route selection\",\n  \"mechanism\": \"When multiple routes match a destination, the longest prefix takes precedence. The /24 route (10.20.30.0/24) is more specific than the /16 route (10.20.0.0/16). During forwarding, the /24 route is chosen because it matches the destination IP 10.20.30.8 more precisely. Administrative distance is used during route installation, not during forwarding, so it does not affect the selection of the longest prefix.\",\n  \"evidence\": \"Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_route",
+          "pergunta": "Two installed IPv4 routes match a destination: 10.20.0.0/16 via OSPF and 10.20.30.0/24 via RIP. Which route is used for 10.20.30.8?<br><br>A. OSPF /16<br>B. RIP /24",
+          "resposta": "<b>Correct answer:</b><br>B. RIP /24<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>Forwarding selects the longest matching <span class=\"k-key\">prefix</span> for route selection</p><div class=\"k-h\">Por que está correta</div><p>When multiple routes match a destination, the longest <span class=\"k-key\">prefix</span> takes precedence. The <span class=\"k-key\">/24</span> route (10.20.30.0<span class=\"k-key\">/24</span>) is more specific than the /16 route (10.20.0.0/16). During forwarding, the <span class=\"k-key\">/24</span> route is chosen because it matches the destination IP 10.20.30.8 more precisely. <span class=\"k-key\">Administrative distance</span> is used during route installation, not during forwarding, so it does not affect the selection of the longest <span class=\"k-key\">prefix</span>.</p><div class=\"k-h\">Evidência na fonte</div><p>Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 62.593,
+      "calls": 2,
+      "parse_ok": true
+    },
+    {
+      "id": "net_trunk",
+      "strategy": "direct",
+      "raw": "[{\"id_conceito\":\"conceito_1\",\"pergunta\":\"Which command forces a switch interface into trunk mode?\",\"resposta\":\"<span class=\\\"ans\\\">switchport mode trunk</span>\",\"tags\":[\"networking\",\"switching\",\"trunking\"]}]",
+      "seconds": 10.089,
+      "calls": 1,
+      "cards": [
+        {
+          "pergunta": "Which command forces a switch interface into trunk mode?",
+          "resposta": "<span class=\"ans\">switchport mode trunk</span>",
+          "id_conceito": "conceito_1",
+          "tags": [
+            "networking",
+            "switching",
+            "trunking"
+          ],
+          "images": []
+        }
+      ],
+      "parse_ok": true
+    },
+    {
+      "id": "net_trunk",
+      "strategy": "guided",
+      "raw": "{\n  \"concept\": \"O comando switchport mode trunk define um interface de switch como trunk.\",\n  \"mechanism\": \"O comando switchport mode trunk configura um interface de Ethernet para operar em modo trunk, permitindo a passagem de múltiplos VLANs. Quando aplicado, o interface é capaz de transportar dados de várias VLANs em uma única conexão. O uso de show interfaces trunk permite verificar o status do trunk e as VLANs permitidas. O modo trunk é diferente do modo access, que apenas suporta uma VLAN específica.\",\n  \"evidence\": \"The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_trunk",
+          "pergunta": "Which command forces a switch interface into trunk mode?<br><br>A. switchport mode access<br>B. switchport mode trunk",
+          "resposta": "<b>Correct answer:</b><br>B. switchport mode trunk<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>O comando switchport mode <span class=\"k-key\">trunk</span> define um interface de switch como <span class=\"k-key\">trunk</span>.</p><div class=\"k-h\">Por que está correta</div><p>O comando switchport mode <span class=\"k-key\">trunk</span> configura um interface de Ethernet para operar em modo <span class=\"k-key\">trunk</span>, permitindo a passagem de múltiplos <span class=\"k-key\">VLANs</span>. Quando aplicado, o interface é capaz de transportar dados de várias <span class=\"k-key\">VLANs</span> em uma única conexão. O uso de <span class=\"k-key\">show interfaces trunk</span> permite verificar o status do <span class=\"k-key\">trunk</span> e as <span class=\"k-key\">VLANs</span> permitidas. O modo <span class=\"k-key\">trunk</span> é diferente do modo access, que apenas suporta uma VLAN específica.</p><div class=\"k-h\">Evidência na fonte</div><p>The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 19.349,
+      "calls": 1,
+      "parse_ok": true
+    },
+    {
+      "id": "net_trunk",
+      "strategy": "guided_review",
+      "raw": "{\n  \"concept\": \"O comando switchport mode trunk define um interface de switch como trunk.\",\n  \"mechanism\": \"O comando switchport mode trunk configura um interface de Ethernet para operar em modo trunk, permitindo a passagem de múltiplos VLANs. Quando aplicado, o interface é capaz de transportar dados de várias VLANs em uma única conexão. O uso de show interfaces trunk permite verificar o status do trunk e as VLANs permitidas. O modo trunk é diferente do modo access, que apenas suporta uma VLAN específica.\",\n  \"evidence\": \"The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.\",\n  \"review_reason\": \"\"\n}",
+      "cards": [
+        {
+          "id_conceito": "net_trunk",
+          "pergunta": "Which command forces a switch interface into trunk mode?<br><br>A. switchport mode access<br>B. switchport mode trunk",
+          "resposta": "<b>Correct answer:</b><br>B. switchport mode trunk<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>O comando switchport mode <span class=\"k-key\">trunk</span> define um interface de switch como <span class=\"k-key\">trunk</span>.</p><div class=\"k-h\">Por que está correta</div><p>O comando switchport mode <span class=\"k-key\">trunk</span> configura um interface de Ethernet para operar em modo <span class=\"k-key\">trunk</span>, permitindo a passagem de múltiplos <span class=\"k-key\">VLANs</span>. Quando aplicado, o interface é capaz de transportar dados de várias <span class=\"k-key\">VLANs</span> em uma única conexão. O uso de <span class=\"k-key\">show interfaces trunk</span> permite verificar o status do <span class=\"k-key\">trunk</span> e as <span class=\"k-key\">VLANs</span> permitidas. O modo <span class=\"k-key\">trunk</span> é diferente do modo access, que apenas suporta uma VLAN específica.</p><div class=\"k-h\">Evidência na fonte</div><p>The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 42.238,
+      "calls": 2,
+      "parse_ok": true
+    }
+  ]
+}

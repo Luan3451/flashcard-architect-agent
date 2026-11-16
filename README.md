@@ -150,3 +150,7 @@ O projeto de origem indica MIT. A inspiração para o conceito de temas é atrib
 Use `--review-only` para salvar candidatos em `BARALHO.cards.json` sem criar um baralho. Edite perguntas, respostas e IDs; reimporte com `--input BARALHO.cards.json --no-ai --output revisado.apkg --non-interactive`. Para imagens, acrescente `--source-media original.pdf` e preserve as referências de mídia. Esse JSON contém material de estudo privado e está ignorado pelo Git. Não é uma revisão automática de correção factual.
 
 Consulte [pesquisa e roadmap de evolução](docs/EVOLUCAO.md) para evidências por cartão, OCR estruturado, aulas com timestamps, narração e tutor de voz. O documento distingue recursos implementados de propostas futuras.
+
+## Questões de simulado: perfil Exam Coach
+
+Para preservar enunciados/alternativas e gerar uma explicação em português no mesmo cartão, use o [Exam Coach](docs/EXAM_COACH.md). Ele recebe questões estruturadas com fonte, conserva o gabarito no topo, recolhe a explicação e sinaliza itens que exigem revisão. Inclui checkpoints por questão e revisão extra opcional. [Casos públicos originais](benchmarks/network_cases.json) e runner de comparação acompanham o perfil. Nenhuma conversa pessoal faz parte do repositório.

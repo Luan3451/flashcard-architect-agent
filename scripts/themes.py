@@ -71,6 +71,14 @@ img {{display: block; max-width: 100% !important; max-height: none !important;
   border-radius: 9px; border: 1px solid var(--edge); object-fit: contain;
   background: #ffffff; image-rendering: auto;}}
 /* Diagram detail matters: never darken or blur imported PDF images. */
+details {{margin-top: 1em;}}
+summary {{cursor: pointer; font-weight: 700; color: var(--accent);}}
+.k-key {{background: #ffe568; color: #172337; border-radius: 3px; padding: 0 .2em; font-weight: 700;}}
+.k-warn {{border-bottom: 2px solid #dc6a35; font-weight: 700;}}
+.k-good {{color: var(--answer); font-weight: 700;}}
+.k-cmd, .cli-prompt {{color: var(--accent); font-weight: 700;}}
+.cli-comment {{color: var(--muted); font-style: italic;}}
+.k-h {{color: var(--accent); font-weight: 700; margin-top: 1em;}}
 .table-wrap {{overflow-x: auto;}}
 table {{border-collapse: collapse; max-width: 100%; display: block; overflow-x: auto;}}
 td, th {{border: 1px solid var(--edge); padding: .35em .6em;}}

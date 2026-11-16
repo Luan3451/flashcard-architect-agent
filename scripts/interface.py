@@ -45,17 +45,20 @@ def maintain():
 
 
 def main():
-    print('Flashcard Architect\n1 Criar cards\n2 Manter decks existentes (EXPERIMENTAL)\n3 Transcrever aula (EXPERIMENTAL)')
+    print('Flashcard Architect\n1 Criar cards\n2 Manter decks existentes (EXPERIMENTAL)\n3 Transcrever aula (EXPERIMENTAL)\n4 Exam Coach (questões com fonte)')
     choice = input('Opção: ').strip()
     try:
         if choice == '2':
             maintain()
-        elif choice in {'1', '3'}:
-            script = 'anki_generator.py' if choice == '1' else 'audio_experimental.py'
+        elif choice in {'1', '3', '4'}:
+            script = {'1': 'anki_generator.py', '3': 'audio_experimental.py', '4': 'exam_coach.py'}[choice]
             args = ['--input', input('Arquivo de entrada: ').strip()]
             if choice == '3':
                 args += ['--model-dir', input('Pasta local dos pesos faster-whisper: ').strip(),
                          '--output-dir', input('Nova pasta para transcrição: ').strip()]
+            elif choice == '4':
+                args += ['--output', input('Arquivo de candidatos .cards.json: ').strip(),
+                         '--provider', input('Provedor [ollama]: ').strip() or 'ollama']
             else:
                 args += ['--output', input('Arquivo de saída .apkg: ').strip()]
             result = subprocess.run([sys.executable, str(Path(__file__).with_name(script)), *args], check=False)
