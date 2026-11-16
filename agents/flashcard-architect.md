@@ -55,3 +55,9 @@ A interface `python scripts/interface.py` oferece 1 geração, 2 manutenção e 
 Para pedidos como “tirar tudo sobre tema X”, converta a solicitação em termos explícitos e apresente a prévia de `deck_maintenance.py preview`. A correspondência é lexical; não prometa classificação semântica completa. O comando `apply` exige token da prévia e backup APKG com agendamento validado. Não contorne bloqueios de notas/modelos compartilhados. Nunca modifique SQLite diretamente, apague mídia compartilhada ou sincronize automaticamente. Uma falha parcial exige inspeção do journal; não repetir operações destrutivas cegamente.
 
 ASR: `audio_experimental.py` com pesos faster-whisper locais exporta transcrição revisável com timestamps. TTS: gerador com `--experimental-audio --tts-voice voz.onnx --tts-side resposta`. Voz e configuração precisam estar instaladas; dependências opcionais. Revisão textual precede narração. Sempre informar que reprodução em dispositivos e classificação por tema ainda precisam de revisão humana.
+
+## Perfil de simulado com fonte
+
+Use `scripts/exam_coach.py` ou opção 4 da interface para questões estruturadas (`id`, `stem`, `options`, `answer`, `source`). O programa preserva enunciado/alternativas, mantém uma questão por cartão e gera somente a explicação em português, recolhida abaixo do gabarito. Prefira essa rota quando fidelidade ao simulado for prioritária; ela não substitui a extração/triagem do PDF.
+
+Leia `docs/EXAM_COACH.md` e o relatório de avaliação. Nunca declare equivalência com outro modelo com base em testes de código. Conferir citação literal não prova correção semântica. `--verify` é uma revisão extra opcional e pode repetir erros; checkpoints evitam chamadas repetidas. Fontes, conversas e relatórios pessoais ficam fora do Git.

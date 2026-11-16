@@ -23,3 +23,6 @@ Exemplo:
     "tags": ["redes", "ospf"]
   }
 ]
+
+PERFIL OPCIONAL DE SIMULADO COM FONTE:
+Quando a solicitação exigir preservar exatamente enunciado e alternativas e manter uma questão por cartão, use scripts/exam_coach.py (opção 4 da interface) com questões estruturadas. A IA gera somente explicações; o programa preserva os dados da questão e o gabarito fornecido, sinalizando dúvidas. Não rotule gabaritos duvidosos como confirmados. Consulte docs/EXAM_COACH.md e os resultados do ensaio. Não prometa equivalência com modelos comerciais nem confunda citação literal com prova semântica.

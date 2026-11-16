@@ -32,7 +32,7 @@ try:
 except ImportError:  # python scripts/anki_generator.py
     from themes import THEMES, css_for_theme, note_model_id, templates
 
-VERSION = "4.1.0"
+VERSION = "4.2.0"
 log = logging.getLogger("flashcard-architect")
 DEFAULT_MODELS = {
     "agy": "gemini-3.8-flash-high",  # override if not available in your agy account
@@ -246,7 +246,7 @@ def extract_document(path: Path, media_dir: Path, use_media: bool, dpi: int) -> 
     return Extraction([data], media, stats)
 
 
-ALLOWED_TAGS = {"b", "strong", "i", "em", "code", "pre", "ul", "ol", "li", "br", "p", "div", "span", "sub", "sup", "img", "table", "thead", "tbody", "tr", "th", "td"}
+ALLOWED_TAGS = {"b", "strong", "i", "em", "code", "pre", "ul", "ol", "li", "br", "p", "div", "span", "sub", "sup", "img", "table", "thead", "tbody", "tr", "th", "td", "details", "summary"}
 
 
 class CardHTMLSanitizer(HTMLParser):
@@ -270,9 +270,11 @@ class CardHTMLSanitizer(HTMLParser):
                 self.out.append(f'<img src="{escape(src, quote=True)}">')
                 self.refs.add(src)
             return
-        if tag == "span":
+        if tag in {"span", "code", "div"}:
             cls = next((v for k, v in attrs if k == "class"), "")
-            self.out.append('<span class="ans">' if cls == "ans" else "<span>")
+            allowed_classes = {"ans", "k-key", "k-warn", "k-good", "k-h", "k-cmd", "cli-prompt", "cli-comment"}
+            classes = " ".join(c for c in (cls or "").split() if c in allowed_classes)
+            self.out.append(f'<{tag} class="{classes}">' if classes else f'<{tag}>')
         else:
             self.out.append(f"<{tag}>")
 
@@ -738,7 +740,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Flashcard Architect v4.1: IA portátil + PDF geométrico + temas originais")
+    p = argparse.ArgumentParser(description="Flashcard Architect v4.2: IA portátil + PDF geométrico + temas originais")
     p.add_argument("--input", "-i", required=True)
     p.add_argument("--deck", "-d", default="Estudos::Flashcard Architect")
     p.add_argument("--output", "-o")

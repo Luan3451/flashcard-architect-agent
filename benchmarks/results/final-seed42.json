@@ -1,0 +1,188 @@
+{
+  "metadata": {
+    "model": "Qwen3-4B-Q4_K_M",
+    "seed": 42,
+    "temperature": 0.2,
+    "profile": "exam-coach-2",
+    "scores": "manual; not independent",
+    "model_revision": "bc640142c66e1fdd12af0bd68f40445458f3869b",
+    "model_sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+    "runtime": "llama.cpp b12359 b1b770d90",
+    "threads": 2,
+    "ctx_size": 4096,
+    "thinking": false,
+    "phase": "final_profile_development_and_heldout",
+    "note": "Raw responses are unchanged. Cards reflect renderer used during each run; final renderer additionally labels uncertain keys and bounds highlights. Raw content is the basis for semantic review."
+  },
+  "results": [
+    {
+      "id": "net_ssh",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"O porto TCP utilizado pelo SSH é 22.\",\n  \"mechanism\": \"O SSH utiliza o porto TCP 22 para estabelecer uma conexão segura com o servidor. O cliente se conecta ao servidor ouvindo no porto 22 e cria uma sessão criptografada para administração remota. Em contraste, o Telnet usa o porto TCP 23, mas não oferece criptografia.\",\n  \"evidence\": \"SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "O porto TCP utilizado pelo SSH é 22.",
+        "mechanism": "O SSH utiliza o porto TCP 22 para estabelecer uma conexão segura com o servidor. O cliente se conecta ao servidor ouvindo no porto 22 e cria uma sessão criptografada para administração remota. Em contraste, o Telnet usa o porto TCP 23, mas não oferece criptografia.",
+        "evidence": "SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "net_ssh",
+          "pergunta": "Which TCP port is used by SSH?<br><br>A. 21<br>B. 22<br>C. 23<br>D. 80",
+          "resposta": "<b>Correct answer:</b><br>B. 22<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>O porto <span class=\"k-key\">TCP</span> utilizado pelo <span class=\"k-key\">SSH</span> é <span class=\"k-key\">22</span>.</p><div class=\"k-h\">Por que está correta</div><p>O <span class=\"k-key\">SSH</span> utiliza o porto <span class=\"k-key\">TCP</span> <span class=\"k-key\">22</span> para estabelecer uma conexão segura com o servidor. O cliente se conecta ao servidor ouvindo no porto <span class=\"k-key\">22</span> e cria uma sessão criptografada para administração remota. Em contraste, o Telnet usa o porto <span class=\"k-key\">TCP</span> 23, mas não oferece criptografia.</p><div class=\"k-h\">Evidência na fonte</div><p>SSH uses TCP port 22. The client connects to the server listening on TCP 22 and establishes an encrypted session for remote administration. Telnet uses TCP 23 and does not provide this encryption.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 32.317,
+      "calls": 1
+    },
+    {
+      "id": "hold_arp",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"A primeira camada de entrega em uma rede local requer o endereço MAC do próximo salto (default gateway).\",\n  \"mechanism\": \"Quando um host envia um pacote para uma sub-rede diferente, ele usa o gateway padrão como próximo salto. O host resolve o endereço IPv4 local do gateway com ARP e envia o frame Ethernet para o endereço MAC do gateway. O endereço IP de destino permanece o da hospedeira remota. Solicitações ARP não cruzam o roteador para descobrir o endereço MAC da hospedeira remota.\",\n  \"evidence\": \"When a destination is outside the local subnet and the host uses a default route, the next hop is the default gateway. The host resolves the gateway's local IPv4 address with ARP and sends the Ethernet frame to the gateway's MAC address. The IP destination remains the remote host's address. ARP requests do not cross the router to discover the remote server's MAC address.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "A primeira camada de entrega em uma rede local requer o endereço MAC do próximo salto (default gateway).",
+        "mechanism": "Quando um host envia um pacote para uma sub-rede diferente, ele usa o gateway padrão como próximo salto. O host resolve o endereço IPv4 local do gateway com ARP e envia o frame Ethernet para o endereço MAC do gateway. O endereço IP de destino permanece o da hospedeira remota. Solicitações ARP não cruzam o roteador para descobrir o endereço MAC da hospedeira remota.",
+        "evidence": "When a destination is outside the local subnet and the host uses a default route, the next hop is the default gateway. The host resolves the gateway's local IPv4 address with ARP and sends the Ethernet frame to the gateway's MAC address. The IP destination remains the remote host's address. ARP requests do not cross the router to discover the remote server's MAC address.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "hold_arp",
+          "pergunta": "A host has an IPv4 default gateway on its local Ethernet subnet. It sends a packet to a different subnet. Whose MAC address is needed for the first-hop frame?<br><br>A. The remote server&#x27;s MAC address<br>B. The default gateway interface&#x27;s MAC address",
+          "resposta": "<b>Correct answer:</b><br>B. The default gateway interface&#x27;s MAC address<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A primeira camada de entrega em uma rede local requer o endereço <span class=\"k-key\">MAC</span> do próximo salto (default gateway).</p><div class=\"k-h\">Por que está correta</div><p>Quando um host envia um pacote para uma sub-rede diferente, ele usa o gateway padrão como próximo salto. O host resolve o endereço <span class=\"k-key\">IP</span>v4 local do gateway com <span class=\"k-key\">ARP</span> e envia o frame Ethernet para o endereço <span class=\"k-key\">MAC</span> do gateway. O endereço <span class=\"k-key\">IP</span> de destino permanece o da hospedeira remota. Solicitações <span class=\"k-key\">ARP</span> não cruzam o roteador para descobrir o endereço <span class=\"k-key\">MAC</span> da hospedeira remota.</p><div class=\"k-h\">Evidência na fonte</div><p>When a destination is outside the local subnet and the host uses a default route, the next hop is the default gateway. The host resolves the gateway&#x27;s local IPv4 address with ARP and sends the Ethernet frame to the gateway&#x27;s MAC address. The IP destination remains the remote host&#x27;s address. ARP requests do not cross the router to discover the remote server&#x27;s MAC address.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 38.757,
+      "calls": 1
+    },
+    {
+      "id": "hold_acl",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"A ordem de processamento de entradas em uma lista de controle de acesso (ACL) determina o resultado final para um pacote.\",\n  \"mechanism\": \"A lista de controle de acesso IPv4 processa as entradas na ordem especificada, parando ao encontrar a primeira correspondência. Um permit para 192.0.2.10 aparece antes de um deny para 192.0.2.0/24. Quando um pacote com origem 192.0.2.10 corresponde ao permit, ele é permitido imediatamente, e a entrada deny subsequente não é avaliada. A ordem de processamento é crucial para determinar se o pacote é permitido ou negado.\",\n  \"evidence\": \"An IPv4 ACL processes entries in order and stops at the first matching entry. A permit entry for source 192.0.2.10 occurs before a deny entry for source 192.0.2.0/24 in this ACL. Traffic from 192.0.2.10 matches the permit entry first, so it is permitted and the later deny entry is not evaluated. If no entry matches, the implicit deny applies.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "A ordem de processamento de entradas em uma lista de controle de acesso (ACL) determina o resultado final para um pacote.",
+        "mechanism": "A lista de controle de acesso IPv4 processa as entradas na ordem especificada, parando ao encontrar a primeira correspondência. Um permit para 192.0.2.10 aparece antes de um deny para 192.0.2.0/24. Quando um pacote com origem 192.0.2.10 corresponde ao permit, ele é permitido imediatamente, e a entrada deny subsequente não é avaliada. A ordem de processamento é crucial para determinar se o pacote é permitido ou negado.",
+        "evidence": "An IPv4 ACL processes entries in order and stops at the first matching entry. A permit entry for source 192.0.2.10 occurs before a deny entry for source 192.0.2.0/24 in this ACL. Traffic from 192.0.2.10 matches the permit entry first, so it is permitted and the later deny entry is not evaluated. If no entry matches, the implicit deny applies.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "hold_acl",
+          "pergunta": "An inbound IPv4 ACL contains a permit for 192.0.2.10 before a deny for 192.0.2.0/24. What happens to a packet from 192.0.2.10 that matches both entries?<br><br>A. It is denied because deny is more restrictive<br>B. It is permitted by the first matching entry",
+          "resposta": "<b>Correct answer:</b><br>B. It is permitted by the first matching entry<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A ordem de processamento de entradas em uma lista de controle de acesso (ACL) determina o resultado final para um pacote.</p><div class=\"k-h\">Por que está correta</div><p>A lista de controle de acesso IPv4 processa as entradas na ordem especificada, parando ao encontrar a <span class=\"k-key\">primeira</span> correspondência. Um <span class=\"k-key\">permit</span> para 192.0.2.10 aparece antes de um <span class=\"k-key\">deny</span> para 192.0.2.0/24. Quando um pacote com origem 192.0.2.10 corresponde ao <span class=\"k-key\">permit</span>, ele é <span class=\"k-key\">permit</span>ido imediatamente, e a entrada <span class=\"k-key\">deny</span> subsequente não é avaliada. A ordem de processamento é crucial para determinar se o pacote é <span class=\"k-key\">permit</span>ido ou negado.</p><div class=\"k-h\">Evidência na fonte</div><p>An IPv4 ACL processes entries in order and stops at the first matching entry. A permit entry for source 192.0.2.10 occurs before a deny entry for source 192.0.2.0/24 in this ACL. Traffic from 192.0.2.10 matches the permit entry first, so it is permitted and the later deny entry is not evaluated. If no entry matches, the implicit deny applies.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 46.824,
+      "calls": 1
+    },
+    {
+      "id": "hold_conflict",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"O porto TCP utilizado por SSH é 22.\",\n  \"mechanism\": \"A fonte afirma que SSH normalmente usa o porto TCP 22, enquanto Telnet usa o porto 23. O gabarito da questão indica que SSH usa o porto 23, o que contradiz a informação da fonte.\",\n  \"evidence\": \"SSH normally uses TCP port 22. Telnet normally uses TCP port 23.\",\n  \"review_reason\": \"A fonte afirma que SSH usa o porto 22, mas o gabarito da questão indica 23, o que é uma contradição. A fonte deve ser revisada para confirmar a precisão da informação.\"\n}",
+      "explanation": {
+        "concept": "O porto TCP utilizado por SSH é 22.",
+        "mechanism": "A fonte afirma que SSH normalmente usa o porto TCP 22, enquanto Telnet usa o porto 23. O gabarito da questão indica que SSH usa o porto 23, o que contradiz a informação da fonte.",
+        "evidence": "SSH normally uses TCP port 22. Telnet normally uses TCP port 23.",
+        "review_reason": "A fonte afirma que SSH usa o porto 22, mas o gabarito da questão indica 23, o que é uma contradição. A fonte deve ser revisada para confirmar a precisão da informação."
+      },
+      "cards": [
+        {
+          "id_conceito": "hold_conflict",
+          "pergunta": "Which TCP port is used by SSH?<br><br>A. 22<br>B. 23",
+          "resposta": "<b>Correct answer:</b><br>B. 23<p><span class=\"k-warn\">REVISAR: A fonte afirma que SSH usa o porto 22, mas o gabarito da questão indica 23, o que é uma contradição. A fonte deve ser revisada para confirmar a precisão da informação.</span></p><details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>O porto TCP utilizado por <span class=\"k-key\">SSH</span> é <span class=\"k-key\">22</span>.</p><div class=\"k-h\">Análise da fonte</div><p>A fonte afirma que <span class=\"k-key\">SSH</span> normalmente usa o porto TCP <span class=\"k-key\">22</span>, enquanto Telnet usa o porto 23. O gabarito da questão indica que <span class=\"k-key\">SSH</span> usa o porto 23, o que contradiz a informação da fonte.</p><div class=\"k-h\">Evidência na fonte</div><p>SSH normally uses TCP port 22. Telnet normally uses TCP port 23.</p></details>",
+          "tags": [
+            "exam_coach",
+            "revisar"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 23.137,
+      "calls": 1
+    },
+    {
+      "id": "net_ospf",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"A prioridade de interface de 0 faz um roteador ser incompatível com a eleição de DR (Designated Router) em uma rede OSPF de difusão.\",\n  \"mechanism\": \"Em uma rede OSPF de difusão, a prioridade de interface é usada para determinar a elegibilidade de um roteador para ser DR ou BDR. Se a prioridade de interface é 0, o roteador não é considerado candidato à eleição. Entre os candidatos elegíveis, a prioridade mais alta determina o vencedor. Se houver empate, o ID do roteador é usado para quebrar o empate. A eleição não é preemptiva, ou seja, um novo roteador com maior prioridade não substitui automaticamente o DR atual.\",\n  \"evidence\": \"On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "A prioridade de interface de 0 faz um roteador ser incompatível com a eleição de DR (Designated Router) em uma rede OSPF de difusão.",
+        "mechanism": "Em uma rede OSPF de difusão, a prioridade de interface é usada para determinar a elegibilidade de um roteador para ser DR ou BDR. Se a prioridade de interface é 0, o roteador não é considerado candidato à eleição. Entre os candidatos elegíveis, a prioridade mais alta determina o vencedor. Se houver empate, o ID do roteador é usado para quebrar o empate. A eleição não é preemptiva, ou seja, um novo roteador com maior prioridade não substitui automaticamente o DR atual.",
+        "evidence": "On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "net_ospf",
+          "pergunta": "On a broadcast OSPF network, which interface priority makes a router ineligible for DR election?<br><br>A. 0<br>B. 1<br>C. 100<br>D. 255",
+          "resposta": "<b>Correct answer:</b><br>A. 0<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>A prioridade de interface de <span class=\"k-key\">0</span> faz um roteador ser incompatível com a eleição de <span class=\"k-key\">DR</span> (Designated Router) em uma rede <span class=\"k-key\">OSPF</span> de difusão.</p><div class=\"k-h\">Por que está correta</div><p>Em uma rede <span class=\"k-key\">OSPF</span> de difusão, a prioridade de interface é usada para determinar a elegibilidade de um roteador para ser <span class=\"k-key\">DR</span> ou <span class=\"k-key\">BDR</span>. Se a prioridade de interface é <span class=\"k-key\">0</span>, o roteador não é considerado candidato à eleição. Entre os candidatos elegíveis, a prioridade mais alta determina o vencedor. Se houver empate, o ID do roteador é usado para quebrar o empate. A eleição não é preemptiva, ou seja, um novo roteador com maior prioridade não substitui automaticamente o <span class=\"k-key\">DR</span> atual.</p><div class=\"k-h\">Evidência na fonte</div><p>On an OSPF broadcast segment, an interface priority of 0 makes a router ineligible to become DR or BDR. Among eligible candidates, higher priority wins; Router ID breaks ties. Election is non-preemptive: a newly arriving higher-priority router does not automatically replace the current DR.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 33.196,
+      "calls": 1
+    },
+    {
+      "id": "net_route",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"Seleção de rota com base no prefixo mais longo\",\n  \"mechanism\": \"O roteador escolhe o caminho mais específico durante a entrega. 10.20.30.8 corresponde a ambos 10.20.0.0/16 e 10.20.30.0/24. O prefixo /24 é mais específico e, portanto, é selecionado. A distância administrativa compara fontes de rota durante a instalação, mas não substitui a seleção do prefixo mais longo durante a entrega.\",\n  \"evidence\": \"Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected. Administrative distance compares route sources for the same destination prefix during route installation; it does not override longest-prefix matching during forwarding.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "Seleção de rota com base no prefixo mais longo",
+        "mechanism": "O roteador escolhe o caminho mais específico durante a entrega. 10.20.30.8 corresponde a ambos 10.20.0.0/16 e 10.20.30.0/24. O prefixo /24 é mais específico e, portanto, é selecionado. A distância administrativa compara fontes de rota durante a instalação, mas não substitui a seleção do prefixo mais longo durante a entrega.",
+        "evidence": "Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected. Administrative distance compares route sources for the same destination prefix during route installation; it does not override longest-prefix matching during forwarding.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "net_route",
+          "pergunta": "Two installed IPv4 routes match a destination: 10.20.0.0/16 via OSPF and 10.20.30.0/24 via RIP. Which route is used for 10.20.30.8?<br><br>A. OSPF /16<br>B. RIP /24",
+          "resposta": "<b>Correct answer:</b><br>B. RIP /24<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>Seleção de rota com base no <span class=\"k-key\">prefix</span>o mais longo</p><div class=\"k-h\">Por que está correta</div><p>O roteador escolhe o caminho mais específico durante a entrega. 10.20.30.8 corresponde a ambos 10.20.0.0/16 e 10.20.30.0<span class=\"k-key\">/24</span>. O <span class=\"k-key\">prefix</span>o <span class=\"k-key\">/24</span> é mais específico e, portanto, é selecionado. A distância administrativa compara fontes de rota durante a instalação, mas não substitui a seleção do <span class=\"k-key\">prefix</span>o mais longo durante a entrega.</p><div class=\"k-h\">Evidência na fonte</div><p>Forwarding selects the longest matching prefix among installed routes. 10.20.30.8 matches both 10.20.0.0/16 and 10.20.30.0/24, so /24 is selected. Administrative distance compares route sources for the same destination prefix during route installation; it does not override longest-prefix matching during forwarding.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 33.857,
+      "calls": 1
+    },
+    {
+      "id": "net_trunk",
+      "strategy": "evidence_first_ptbr",
+      "raw": "{\n  \"concept\": \"O comando que força uma interface de switch em modo trunk\",\n  \"mechanism\": \"O comando 'switchport mode trunk' configura uma interface de switch para operar em modo trunk, permitindo múltiplos VLANs na ligação. O modo trunk permite a passagem de múltiplos VLANs, enquanto o modo access permite apenas um VLAN. A verificação do estado do trunk pode ser feita com o comando 'show interfaces trunk'.\",\n  \"evidence\": \"The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.\",\n  \"review_reason\": \"\"\n}",
+      "explanation": {
+        "concept": "O comando que força uma interface de switch em modo trunk",
+        "mechanism": "O comando 'switchport mode trunk' configura uma interface de switch para operar em modo trunk, permitindo múltiplos VLANs na ligação. O modo trunk permite a passagem de múltiplos VLANs, enquanto o modo access permite apenas um VLAN. A verificação do estado do trunk pode ser feita com o comando 'show interfaces trunk'.",
+        "evidence": "The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.",
+        "review_reason": ""
+      },
+      "cards": [
+        {
+          "id_conceito": "net_trunk",
+          "pergunta": "Which command forces a switch interface into trunk mode?<br><br>A. switchport mode access<br>B. switchport mode trunk",
+          "resposta": "<b>Correct answer:</b><br>B. switchport mode trunk<details><summary>Explicação detalhada</summary><div class=\"k-h\">Conceito-chave</div><p>O comando que força uma interface de switch em modo <span class=\"k-key\">trunk</span></p><div class=\"k-h\">Por que está correta</div><p>O comando &#x27;switchport mode <span class=\"k-key\">trunk</span>&#x27; configura uma interface de switch para operar em modo <span class=\"k-key\">trunk</span>, permitindo múltiplos <span class=\"k-key\">VLANs</span> na ligação. O modo <span class=\"k-key\">trunk</span> permite a passagem de múltiplos <span class=\"k-key\">VLANs</span>, enquanto o modo access permite apenas um VLAN. A verificação do estado do <span class=\"k-key\">trunk</span> pode ser feita com o comando &#x27;<span class=\"k-key\">show interfaces trunk</span>&#x27;.</p><div class=\"k-h\">Evidência na fonte</div><p>The command switchport mode trunk sets an Ethernet switch interface to trunk mode, allowing multiple VLANs on that link.</p></details>",
+          "tags": [
+            "exam_coach"
+          ],
+          "images": []
+        }
+      ],
+      "seconds": 20.649,
+      "calls": 1
+    }
+  ]
+}
