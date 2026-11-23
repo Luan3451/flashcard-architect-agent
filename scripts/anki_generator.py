@@ -37,7 +37,7 @@ try:
 except ImportError:
     import quality
 
-VERSION = "4.2.1"
+VERSION = "4.3.0"
 log = logging.getLogger("flashcard-architect")
 DEFAULT_MODELS = {
     "agy": "gemini-3.8-flash-high",  # override if not available in your agy account
@@ -785,7 +785,7 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Flashcard Architect v4.2.1: IA portátil + PDF geométrico + temas originais")
+    p = argparse.ArgumentParser(description="Flashcard Architect v4.3: IA portátil + PDF geométrico + temas originais")
     p.add_argument("--input", "-i", required=True)
     p.add_argument("--deck", "-d", default="Estudos::Flashcard Architect")
     p.add_argument("--output", "-o")

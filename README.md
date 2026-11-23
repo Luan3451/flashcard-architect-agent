@@ -1,15 +1,21 @@
-# Flashcard Architect Agent v4 — Portátil, resiliente e com temas originais
+# Flashcard Architect Agent v4.3 — geração e manutenção com escopo controlado
 
 **Atualização proposta** para [`Luan3451/flashcard-architect-agent`](https://github.com/Luan3451/flashcard-architect-agent). O motor é independente do serviço de IA e transforma PDF, Markdown, DOCX, TXT e JSON em `.apkg` Anki.
 
 Esta distribuição substitui o motor `scripts/anki_generator.py` v3 e mantém a estrutura de agente e skill, agora com triagem de 7 eixos. Para aplicação manual a partir de um ZIP, veja `APLICAR.md`.
 
 
-## Interface e manutenção experimental
+## Interface, integração própria e estudos
 
-Execute `python scripts/interface.py`: **1 Criar cards**, **2 Manter decks existentes**, **3 Transcrever aula**. A opção 2 usa AnkiConnect local e permite estilizar, destacar termos e remover notas por tema ou áudio inválido. Toda mudança exige prévia, confirmação e backup APKG com agendamento em uma pasta local. Notas/modelos compartilhados fora do escopo são bloqueados.
+Execute `python scripts/interface.py`: **1 Criar cards**, **2 AnkiConnect legado**, **3 Transcrever aula**, **4 Exam Coach**, **5 Ponte nativa segura (experimental)**.
 
-Áudio experimental: transcrição com faster-whisper e narração local com Piper, incluída no `.apkg`. Instalação, limites e recuperação estão no [guia experimental](docs/EXPERIMENTAL.md). As dependências são opcionais; não há download automático de modelos.
+A opção 5 usa nosso próprio add-on e cliente em Python, sem AnkiConnect, Node ou SDK MCP. Instale o [add-on pronto](addons/flashcard_architect_bridge.ankiaddon) no Anki Desktop e siga o [guia da ponte nativa](docs/NATIVE_BRIDGE.md). A ponte fica desativada até ser iniciada no menu Ferramentas: autoriza um deck por sessão, limita alterações, exige prévia e confirmação dentro do Anki e salva backup local antes de escrever. Não expõe aplicação de alterações pelo MCP. O caminho legado da opção 2 continua experimental e tem outro modelo de autorização.
+
+O [planejador de estudos](docs/STUDY_PLANNER.md) organiza temas para idiomas, provas e estudo geral usando objetivos, idiomas e referências declarados. Explica correspondências, sinaliza ambiguidades e lacunas e sugere intercalação ponderada, preservando revisões vencidas e o agendamento do Anki. É uma heurística auditável, sem garantia de classificação semântica ou ganho de aprendizagem.
+
+Áudio experimental: transcrição com faster-whisper e narração local com Piper, incluída no `.apkg`. Instalação, limites e recuperação estão no [guia experimental](docs/EXPERIMENTAL.md). As dependências de áudio são opcionais; não há download automático de modelos.
+
+Validação e limites desta versão: [relatório 4.3](docs/VALIDACAO_4_3.md).
 
 ## Instalação
 

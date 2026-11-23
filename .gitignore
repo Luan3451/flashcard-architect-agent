@@ -54,3 +54,8 @@ transcripts/
 
 # Private quality diagnostics
 *.quality.json
+
+# Private native bridge credentials and state
+addons/**/user_files/
+bridge_sessions/
+*.study-plan.json
