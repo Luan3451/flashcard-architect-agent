@@ -1,0 +1,10 @@
+{
+  "mode": "exam",
+  "front_language": "en",
+  "explanation_language": "pt-BR",
+  "reference": "Exemplo sintético; substitua pelo blueprint e versão reais",
+  "topics": [
+    {"id": "routing", "terms": ["OSPF", "RIP", "longest prefix"], "weight": 2},
+    {"id": "switching", "terms": ["VLAN", "trunk", "STP"], "weight": 1}
+  ]
+}

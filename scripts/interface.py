@@ -44,11 +44,35 @@ def maintain():
     print(f'Concluído. Backup: {apply_plan(client, plan, root, plan["token"])}')
 
 
+def native_maintain():
+    try:
+        from .bridge_client import BridgeClient
+    except ImportError:
+        from bridge_client import BridgeClient
+    client = BridgeClient(input('Arquivo privado de sessão mostrado no Anki: ').strip())
+    print(json.dumps(client('list_decks'), ensure_ascii=False, indent=2))
+    actions = ['highlight', 'style', 'remove-topic']
+    print('1 Destacar termos | 2 Estilizar | 3 Remover por tema')
+    index = int(input('Ação: '))
+    if not 1 <= index <= len(actions): raise ValueError('Ação inválida')
+    action = actions[index - 1]
+    params = {'action': action}
+    if action == 'style': params['theme'] = input('Tema [paper]: ').strip() or 'paper'
+    else: params['terms'] = [t.strip() for t in input('Termos separados por vírgula: ').split(',') if t.strip()]
+    preview = client('preview', **params)
+    print(json.dumps(preview, ensure_ascii=False, indent=2))
+    if input('Confira a prévia. Digite APLICAR para solicitar confirmação no Anki: ').strip() != 'APLICAR':
+        print('Nenhuma alteração aplicada.'); return
+    print(json.dumps(client('apply', plan_id=preview['plan_id']), ensure_ascii=False, indent=2))
+
+
 def main():
-    print('Flashcard Architect\n1 Criar cards\n2 Manter decks existentes (EXPERIMENTAL)\n3 Transcrever aula (EXPERIMENTAL)\n4 Exam Coach (questões com fonte)')
+    print('Flashcard Architect\n1 Criar cards\n2 Manter decks via AnkiConnect (legado/experimental)\n3 Transcrever aula (EXPERIMENTAL)\n4 Exam Coach (questões com fonte)\n5 Ponte nativa segura (experimental)')
     choice = input('Opção: ').strip()
     try:
-        if choice == '2':
+        if choice == '5':
+            native_maintain()
+        elif choice == '2':
             maintain()
         elif choice in {'1', '3', '4'}:
             script = {'1': 'anki_generator.py', '3': 'audio_experimental.py', '4': 'exam_coach.py'}[choice]

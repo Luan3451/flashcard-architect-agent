@@ -1,6 +1,6 @@
 {
   "name": "flashcard-architect",
-  "version": "4.2.1",
+  "version": "4.3.0",
   "description": "PDF para Anki com IA portátil; áudio local e manutenção de decks com backup (experimentais).",
   "author": "Luan3451",
   "displayName": "Flashcard Architect Portable v4",
@@ -16,7 +16,9 @@
     "Prepare JSON para importar no Flashcard Architect usando ChatGPT ou Claude",
     "Prepare uma prévia para remover notas sobre um tema de um deck, com backup antes de aplicar",
     "Narre os cartões revisados com áudio local experimental",
-    "Gere uma explicação guiada por fonte, preservando uma questão por cartão no perfil Exam Coach"
+    "Gere uma explicação guiada por fonte, preservando uma questão por cartão no perfil Exam Coach",
+    "Prepare uma prévia de manutenção pela ponte nativa, com confirmação local no Anki",
+    "Organize os temas de estudo por objetivo, idiomas e escopo de prova sem mudar o agendamento"
   ],
   "permissions": {
     "filesystem": {

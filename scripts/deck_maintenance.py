@@ -15,7 +15,7 @@ from pathlib import Path
 import re
 import tempfile
 import unicodedata
-from urllib.request import Request, build_opener, ProxyHandler
+from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 import uuid
 import zipfile
 
@@ -51,12 +51,19 @@ def write_json(path, data):
     temp.replace(path)
 
 
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs): return None
+
+
 class AnkiClient:
     def __init__(self):
         self.key = os.environ.get('ANKICONNECT_API_KEY')
-        self.opener = build_opener(ProxyHandler({}))  # loopback must not use cloud proxies
+        self.opener = build_opener(ProxyHandler({}), NoRedirect())  # loopback must not use cloud proxies
 
     def __call__(self, action, **params):
+        allowed = {'getActiveProfile', 'deckNames', 'findCards', 'cardsInfo', 'notesInfo',
+                   'getMediaDirPath', 'modelStyling', 'exportPackage', 'updateModelStyling', 'updateNoteFields', 'deleteNotes'}
+        if action not in allowed: raise ValueError('Ação AnkiConnect fora da allowlist')
         payload = {'action': action, 'version': 6, 'params': params}
         if self.key:
             payload['key'] = self.key
@@ -64,7 +71,9 @@ class AnkiClient:
                       headers={'Content-Type': 'application/json'})
         # Mutations are never retried: a timeout can mean the action completed.
         with self.opener.open(req, timeout=300) as response:
-            data = json.load(response)
+            raw = response.read(16 * 1024 * 1024 + 1)
+            if len(raw) > 16 * 1024 * 1024: raise RuntimeError('Resposta AnkiConnect excessiva')
+            data = json.loads(raw)
         if data.get('error'):
             raise RuntimeError(f"AnkiConnect {action}: {data['error']}")
         return data['result']

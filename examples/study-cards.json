@@ -1,0 +1,5 @@
+[
+  {"id": "sample-1", "text": "OSPF priority and DR election", "front_language": "en", "explanation_language": "pt-BR", "due": true},
+  {"id": "sample-2", "text": "Configure a VLAN trunk", "front_language": "en", "explanation_language": "pt-BR", "due": false},
+  {"id": "sample-3", "text": "OSPF and VLAN", "front_language": "en", "explanation_language": "pt-BR", "due": true}
+]
